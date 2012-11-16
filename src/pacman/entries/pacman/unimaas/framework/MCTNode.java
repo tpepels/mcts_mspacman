@@ -1,7 +1,6 @@
 package pacman.entries.pacman.unimaas.framework;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 
 import pacman.entries.pacman.unimaas.selection.UCTSelection;
 import pacman.game.Constants.MOVE;
@@ -21,13 +20,12 @@ public abstract class MCTNode {
 	//
 	public int depth = 0, pathLength, junctionIndex;
 	// Scores
-	public double maxPillScore, maxGhostScore, maxSurvivals, maxVisitCount;
-	private double visitCount;
-	public double pillScore, ghostScore, survivals, turnVisitCount;
+	public double maxPillScore, maxGhostScore, maxSurvivals, maxVisitCount, maxTurnVisits;
+	public double visitCount, turnVisitCount, pillScore, ghostScore, survivals;
+	private double currentSurvivals = 0, maxCurrentSurvivals = 0;
 
 	// Tree fields
 	protected MCTNode[] children;
-	private int nodesInTree;
 	private MCTNode parent;
 	// Move fields used for expansion
 	private MCTNode selectedNode = this;
@@ -59,16 +57,12 @@ public abstract class MCTNode {
 	/**
 	 * Constructor for MCT node
 	 * 
-	 * @param gameState
-	 *            The gamestate of the node
-	 * @param parent
-	 *            The parent of the node.
-	 * @param playerNode
-	 *            True if this is a node for a player-move, false if opponent
-	 *            move
+	 * @param gameState The gamestate of the node
+	 * @param parent The parent of the node.
+	 * @param playerNode True if this is a node for a player-move, false if opponent move
 	 */
-	public MCTNode(Game gameState, MCTNode parent, MOVE pathDir, Edge edge,
-			int junctionI, int pathLength) {
+	public MCTNode(Game gameState, MCTNode parent, MOVE pathDir, Edge edge, int junctionI,
+			int pathLength) {
 		this.gameState = gameState;
 		this.parent = parent;
 		this.pathDirection = pathDir;
@@ -78,10 +72,6 @@ public abstract class MCTNode {
 		this.pathLength = pathLength;
 		// At first any node will not have child nodes
 		children = null;
-	}
-
-	public void addNode() {
-		nodesInTree++;
 	}
 
 	public void addDistance(int dist) {
@@ -114,6 +104,9 @@ public abstract class MCTNode {
 		visitCount *= discount;
 		//
 		turnVisitCount = 0;
+		maxTurnVisits = 0;
+		currentSurvivals = 0;
+		//
 		if (children != null) {
 			for (MCTNode c : children) {
 				c.discountValues(discount);
@@ -124,11 +117,11 @@ public abstract class MCTNode {
 	public void addValue(MCTResult result) {
 		pillScore += result.pillScore;
 		ghostScore += result.ghostScore;
-
+		//
 		if (result.target) {
 			survivals++;
+			currentSurvivals++;
 		}
-
 		// Leafnodes have maxvalue = value
 		if (isLeaf()) {
 			maxPillScore = pillScore;
@@ -136,6 +129,8 @@ public abstract class MCTNode {
 			maxSurvivals = survivals;
 			//
 			maxVisitCount = visitCount;
+			maxTurnVisits = turnVisitCount;
+			maxCurrentSurvivals = currentSurvivals;
 		}
 	}
 
@@ -172,14 +167,12 @@ public abstract class MCTNode {
 				} else if (selectionType == SelectionType.PillScore) {
 					if (child.getMaxPillScore() * child.getMaxSurvivalRate() > topRate) {
 						topChild = child;
-						topRate = child.getMaxPillScore()
-								* child.getMaxSurvivalRate();
+						topRate = child.getMaxPillScore() * child.getMaxSurvivalRate();
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
 					if (child.getMaxGhostScore() * child.getMaxSurvivalRate() > topRate) {
 						topChild = child;
-						topRate = child.getMaxGhostScore()
-								* child.getMaxSurvivalRate();
+						topRate = child.getMaxGhostScore() * child.getMaxSurvivalRate();
 					}
 				}
 			}
@@ -189,6 +182,8 @@ public abstract class MCTNode {
 			node.maxGhostScore = topChild.maxGhostScore;
 			//
 			node.maxVisitCount = topChild.maxVisitCount;
+			node.maxTurnVisits = topChild.maxTurnVisits;
+			node.maxCurrentSurvivals = topChild.maxCurrentSurvivals;
 			//
 			node = node.getParentNode();
 		}
@@ -209,17 +204,15 @@ public abstract class MCTNode {
 	}
 
 	/**
-	 * The implementation of this method should do the following: 1. Initialize
-	 * the children array with size equal to the number of possible childnodes
-	 * (if not initialized)
+	 * The implementation of this method should do the following: 1. Initialize the children array with size equal to
+	 * the number of possible childnodes (if not initialized)
 	 * 
 	 * @return The position of the first expanded child
 	 */
 	public abstract void expand(DiscreteGame dGame, MCTNode rootNode);
 
 	/**
-	 * Get the children array of this node, only contains children in positions
-	 * which have been expanded.
+	 * Get the children array of this node, only contains children in positions which have been expanded.
 	 * 
 	 * @return Children array
 	 */
@@ -312,8 +305,7 @@ public abstract class MCTNode {
 	}
 
 	/**
-	 * @return The direction pacman went from the previous node to reach this
-	 *         node
+	 * @return The direction pacman went from the previous node to reach this node
 	 */
 	public MOVE getPathDirection() {
 		return pathDirection;
@@ -395,14 +387,12 @@ public abstract class MCTNode {
 				} else if (selectionType == SelectionType.PillScore) {
 					if (child.getMaxPillScore() * child.getMaxSurvivalRate() > topScore) {
 						topChild = child;
-						topScore = child.getMaxPillScore()
-								* child.getMaxSurvivalRate();
+						topScore = child.getMaxPillScore() * child.getMaxSurvivalRate();
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
 					if (child.getMaxGhostScore() * child.getMaxSurvivalRate() > topScore) {
 						topChild = child;
-						topScore = child.getMaxGhostScore()
-								* child.getMaxSurvivalRate();
+						topScore = child.getMaxGhostScore() * child.getMaxSurvivalRate();
 					}
 				}
 			}
@@ -412,6 +402,8 @@ public abstract class MCTNode {
 				maxGhostScore = ghostScore;
 				//
 				maxVisitCount = visitCount;
+				maxCurrentSurvivals = currentSurvivals;
+				maxTurnVisits = turnVisitCount;
 				return;
 			}
 			//
@@ -420,6 +412,8 @@ public abstract class MCTNode {
 			maxGhostScore = topChild.maxGhostScore;
 			//
 			maxVisitCount = topChild.maxVisitCount;
+			maxTurnVisits = topChild.maxTurnVisits;
+			maxCurrentSurvivals = topChild.maxCurrentSurvivals;
 		}
 	}
 
@@ -450,14 +444,12 @@ public abstract class MCTNode {
 				} else if (selectionType == SelectionType.PillScore) {
 					if (child.getMaxPillScore() * child.getMaxSurvivalRate() > topScore) {
 						topChild = child;
-						topScore = child.getMaxPillScore()
-								* child.getMaxSurvivalRate();
+						topScore = child.getMaxPillScore() * child.getMaxSurvivalRate();
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
 					if (child.getMaxGhostScore() * child.getMaxSurvivalRate() > topScore) {
 						topChild = child;
-						topScore = child.getMaxGhostScore()
-								* child.getMaxSurvivalRate();
+						topScore = child.getMaxGhostScore() * child.getMaxSurvivalRate();
 					}
 				}
 			}
@@ -467,6 +459,8 @@ public abstract class MCTNode {
 				maxGhostScore = ghostScore;
 				//
 				maxVisitCount = visitCount;
+				maxCurrentSurvivals = currentSurvivals;
+				maxTurnVisits = turnVisitCount;
 				return;
 			}
 			//
@@ -475,12 +469,13 @@ public abstract class MCTNode {
 			maxGhostScore = topChild.maxGhostScore;
 			//
 			maxVisitCount = topChild.maxVisitCount;
+			maxCurrentSurvivals = topChild.maxCurrentSurvivals;
+			maxTurnVisits = topChild.maxTurnVisits;
 		}
 	}
 
 	/**
-	 * Selects a leafnode in the tree for expansion according to the given
-	 * selection method.
+	 * Selects a leafnode in the tree for expansion according to the given selection method.
 	 * 
 	 * @param selection
 	 *            The class containing the selection method
@@ -560,14 +555,13 @@ public abstract class MCTNode {
 	MOVE[] moves;
 
 	/**
-	 * Does a simulation using the rootnode's game state followed by actions up
-	 * to this node's position
+	 * Does a simulation using the rootnode's game state followed by actions up to this node's position
 	 * 
 	 * @param simulation
 	 *            The simulation-class to use for simulating the playout
 	 */
-	public MCTResult simulate(MCTSimulation simulation, int simCount,
-			SelectionType selectionType, int target) {
+	public MCTResult simulate(MCTSimulation simulation, int simCount, SelectionType selectionType,
+			int target) {
 		// Do a simulation starting at the root's game state
 		selectedNode = this;
 		pacLocations = new int[selectedNode.depth + 1];
@@ -585,14 +579,9 @@ public abstract class MCTNode {
 		// Get the root's game states
 		Game interState = selectedNode.getGameState().copy();
 		DiscreteGame disGame = selectedNode.getdGame().copy();
-
-		// if (target == -1) {
-		return simulation.playout(disGame, interState, moves, pacLocations,
-				simCount, selectionType);
-		// } else {
-		// return simulation.playout(disGame, interState, moves, pacLocations,
-		// simCount, selectionType, target);
-		// }
+		// 
+		return simulation
+				.playout(disGame, interState, moves, pacLocations, simCount, selectionType);
 	}
 
 	@Override
@@ -601,14 +590,14 @@ public abstract class MCTNode {
 
 		String string = "node| j:" + getJunctionIndex() + "\t | parent j: "
 				+ parent.getJunctionIndex() + "\t | move: " + pathDirection
-				+ "\t | [p,g,s,v]: [" + df2.format(getPillScore()) + ", "
-				+ df2.format(getGhostScore()) + ", "
-				+ df2.format(getSurvivalRate()) + ", " + (int) getVisitCount()
-				+ ", " + turnVisitCount + "]\t | MAX[p,g,s,v]: [" + df2.format(getMaxPillScore())
-				+ ", " + df2.format(getMaxGhostScore()) + ", "
-				+ df2.format(getMaxSurvivalRate()) + ", "
-				+ (int) getMaxVisitCount() + "]" + "\t | pathlength: "
-				+ getPathLength() + "\t | depth: " + getDepth();
+				+ "\t | [p,g,s,vt,vc,sc]: [" + df2.format(getPillScore()) + ", "
+				+ df2.format(getGhostScore()) + ", " + df2.format(getSurvivalRate()) + ", "
+				+ (int) getVisitCount() + ", " + turnVisitCount + ", "
+				+ df2.format(currentSurvivals / turnVisitCount) + "]\t | MAX[p,g,s,vt,vc,sc]: ["
+				+ df2.format(getMaxPillScore()) + ", " + df2.format(getMaxGhostScore()) + ", "
+				+ df2.format(getMaxSurvivalRate()) + ", " + (int) getMaxVisitCount() + ", "
+				+ maxTurnVisits + ", " + df2.format(maxCurrentSurvivals / maxTurnVisits) + "]"
+				+ "\t | pathlength: " + getPathLength() + "\t | depth: " + getDepth();
 
 		return string;
 	}

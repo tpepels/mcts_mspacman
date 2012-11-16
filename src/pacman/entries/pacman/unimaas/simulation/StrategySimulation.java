@@ -48,7 +48,7 @@ public class StrategySimulation implements MCTSimulation {
 	//
 	// Fields used for determining if pacman was trapped.
 	boolean frontBlocked, rearBlocked;
-	int pacHeading, pacRear, pacEdge, ghostJ, ghostEdge, ghostHeading;
+	int pacHeading, pacRear, pacEdge, ghostJ, ghostEdge, ghostHeading, treePhase;
 	//
 	private int mazeBefore, pwrPillsBefore, currentEdgesVisited;
 	private boolean died, targetReached, atePower, ateGhost, illegalPP, edgeCleared, ghostAtInitial;
@@ -326,6 +326,7 @@ public class StrategySimulation implements MCTSimulation {
 		boolean clearedEdgeOnPath = false;
 		// MOVE[] moves;
 		// boolean moveOK = false;
+		treePhase = 0;
 		for (i = pathMoves.length - 1; i >= 0; i--) {
 			// Execute the first path-move to determine a direction
 			pacMove = pathMoves[i];
@@ -333,6 +334,7 @@ public class StrategySimulation implements MCTSimulation {
 			//
 			try {
 				advanceGame();
+				treePhase++;
 			} catch (Exception e) {
 				System.err.println("Nullpointer :(");
 				break;

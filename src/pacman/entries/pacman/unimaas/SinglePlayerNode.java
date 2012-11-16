@@ -26,8 +26,8 @@ public class SinglePlayerNode extends MCTNode {
 		super(dGame, gameState);
 	}
 
-	public SinglePlayerNode(Game gameState, MCTNode parent, MOVE pathDirection, Edge edge, int junctionIndex,
-			int pathLength) {
+	public SinglePlayerNode(Game gameState, MCTNode parent, MOVE pathDirection, Edge edge,
+			int junctionIndex, int pathLength) {
 		super(gameState, parent, pathDirection, edge, junctionIndex, pathLength);
 	}
 
@@ -58,16 +58,14 @@ public class SinglePlayerNode extends MCTNode {
 
 				if (!isRoot()) {
 					if (nextEdges[i].uniqueId != getEdgeId()) {
-						childNode = new SinglePlayerNode(gameState, this, MOVE.values()[i], nextEdges[i], nextJunction,
-								getPathLength() + nextEdges[i].length);
-						rootNode.addNode();
+						childNode = new SinglePlayerNode(gameState, this, MOVE.values()[i],
+								nextEdges[i], nextJunction, getPathLength() + nextEdges[i].length);
 						tempChildren.add(childNode);
 						childCount++;
 					}
 				} else {
-					rootNode.addNode();
-					childNode = new SinglePlayerNode(gameState, this, MOVE.values()[i], nextEdges[i], nextJunction,
-							nextEdges[i].length);
+					childNode = new SinglePlayerNode(gameState, this, MOVE.values()[i],
+							nextEdges[i], nextJunction, nextEdges[i].length);
 					tempChildren.add(childNode);
 					childCount++;
 				}
@@ -93,17 +91,16 @@ public class SinglePlayerNode extends MCTNode {
 				}
 			}
 
-			MCTNode forwardNode = new SinglePlayerNode(gameState, this, forward, dGame.getCurrentPacmanEdge(),
-					dGame.getPacHeading(), dGame.pacManDistanceToHeading());
+			MCTNode forwardNode = new SinglePlayerNode(gameState, this, forward,
+					dGame.getCurrentPacmanEdge(), dGame.getPacHeading(),
+					dGame.pacManDistanceToHeading());
 
 			forwardNode.ghostScore += forwardScore;
 			forwardNode.pillScore += forwardScore;
 			forwardNode.addVisit();
 
-			rootNode.addNode();
-			MCTNode reverseNode = new SinglePlayerNode(gameState, this, reverse, dGame.getCurrentPacmanEdge(),
-					dGame.getPacRear(), dGame.pacManDistanceToRear());
-			rootNode.addNode();
+			MCTNode reverseNode = new SinglePlayerNode(gameState, this, reverse,
+					dGame.getCurrentPacmanEdge(), dGame.getPacRear(), dGame.pacManDistanceToRear());
 			//
 			tempChildren.add(forwardNode);
 			tempChildren.add(reverseNode);
@@ -148,13 +145,10 @@ public class SinglePlayerNode extends MCTNode {
 				// If after retries attempts the path could not be followed,
 				// discard the path
 				if (!died && !nextMaze) {
-					rootNode.addNode();
-					MCTNode childNode = new SinglePlayerNode(
-							gameState,
-							this,
-							pacManMoves[i],
-							dGame.getGraph()[newState.getPacmanCurrentNodeIndex()][pacManMoves[i].opposite().ordinal()],
-							newState.getPacmanCurrentNodeIndex(), (int) gameState.getDistance(pacLoc,
+					MCTNode childNode = new SinglePlayerNode(gameState, this, pacManMoves[i],
+							dGame.getGraph()[newState.getPacmanCurrentNodeIndex()][pacManMoves[i]
+									.opposite().ordinal()], newState.getPacmanCurrentNodeIndex(),
+							(int) gameState.getDistance(pacLoc,
 									newState.getPacmanCurrentNodeIndex(), DM.PATH));
 					tempChildren.add(childNode);
 					childCount++;
