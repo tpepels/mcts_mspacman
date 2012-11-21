@@ -61,10 +61,6 @@ public class UCTSelection implements MCTSelection {
 				bestValue = uctValue;
 			}
 		}
-		if(selectedNode == null) {
-			System.out.println("Hier!");
-			
-		}
 		//
 		selectedNode.addVisit();
 		//

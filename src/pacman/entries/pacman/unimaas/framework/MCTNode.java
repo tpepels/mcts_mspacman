@@ -57,9 +57,12 @@ public abstract class MCTNode {
 	/**
 	 * Constructor for MCT node
 	 * 
-	 * @param gameState The gamestate of the node
-	 * @param parent The parent of the node.
-	 * @param playerNode True if this is a node for a player-move, false if opponent move
+	 * @param gameState
+	 *            The gamestate of the node
+	 * @param parent
+	 *            The parent of the node.
+	 * @param playerNode
+	 *            True if this is a node for a player-move, false if opponent move
 	 */
 	public MCTNode(Game gameState, MCTNode parent, MOVE pathDir, Edge edge, int junctionI,
 			int pathLength) {
@@ -143,13 +146,24 @@ public abstract class MCTNode {
 		visitCount++;
 	}
 
-	public void backPropagate(MCTResult result, SelectionType selectionType) {
+	public void backPropagate(MCTResult result, SelectionType selectionType, int treePhaseDepth) {
 		MCTNode node = this;
-		node.addValue(result);
+		if (node.depth > treePhaseDepth) {
+			node.turnVisitCount--;
+			node.visitCount--;
+		} else {
+			node.addValue(result);
+		}
 		node = node.getParentNode();
 
 		while (node != null) {
 			// Update the node's values (Average Back-propagation)
+			if (node.depth > treePhaseDepth) {
+				node.visitCount--;
+				node.turnVisitCount--;
+				node = node.getParentNode();
+				continue;
+			}
 			node.addValue(result);
 
 			// Maximum back-propagate the values of the child with the highest
@@ -361,15 +375,32 @@ public abstract class MCTNode {
 		return parent == null;
 	}
 
+	// The children of a node should represent at least this part of the node's visits.
+	double minChildVisitRate = .6;
+
 	public void propagateMaxValues(SelectionType selectionType) {
 		if (!isLeaf()) {
+			double childrenVCount = 0.;
 			//
 			for (MCTNode c : children) {
+				childrenVCount += c.getVisitCount();
 				if (c.isLeaf()) {
 					continue;
 				}
 				c.propagateMaxValues(selectionType);
 			}
+			// The children didn't have enough visits compared to this node.
+			if (childrenVCount / getVisitCount() < minChildVisitRate) {
+				maxSurvivals = survivals;
+				maxPillScore = pillScore;
+				maxGhostScore = ghostScore;
+				//
+				maxVisitCount = visitCount;
+				maxCurrentSurvivals = currentSurvivals;
+				maxTurnVisits = turnVisitCount;
+				return;
+			}
+
 			//
 			MCTNode topChild = null;
 			double topScore = Double.NEGATIVE_INFINITY;
@@ -420,11 +451,24 @@ public abstract class MCTNode {
 	public void propagateMaxValues(SelectionType selectionType, double minRate) {
 		if (!isLeaf()) {
 			//
+			double childrenVCount = 0.;
 			for (MCTNode c : children) {
+				childrenVCount += c.getVisitCount();
 				if (c.isLeaf()) {
 					continue;
 				}
 				c.propagateMaxValues(selectionType, minRate);
+			}
+			// The children didn't have enough visits compared to this node.
+			if (childrenVCount / getVisitCount() < minChildVisitRate) {
+				maxSurvivals = survivals;
+				maxPillScore = pillScore;
+				maxGhostScore = ghostScore;
+				//
+				maxVisitCount = visitCount;
+				maxCurrentSurvivals = currentSurvivals;
+				maxTurnVisits = turnVisitCount;
+				return;
 			}
 			//
 			MCTNode topChild = null;
@@ -579,7 +623,7 @@ public abstract class MCTNode {
 		// Get the root's game states
 		Game interState = selectedNode.getGameState().copy();
 		DiscreteGame disGame = selectedNode.getdGame().copy();
-		// 
+		//
 		return simulation
 				.playout(disGame, interState, moves, pacLocations, simCount, selectionType);
 	}

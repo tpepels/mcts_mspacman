@@ -22,13 +22,12 @@ public class MyPacMan extends Controller<MOVE> {
 	private final int endGameTime = Constants.MAX_TIME - 3000; // At this time,
 																// start eating
 																// ghosts asap
-	private final int initialMaxPathLength = 40, reuseMaxPathLength = 60,
-			maxSimulations = 100;
+	private final int initialMaxPathLength = 40, reuseMaxPathLength = 60, maxSimulations = 100;
 	private int maxPathLength = initialMaxPathLength;
 	// penalties and discounts
 	private double reversePenalty = .7; // The reward penalty for selecting a
 										// reverse move
-	private double discount = .9; // Decay factor for the tree decay
+	private double discount = .8; // Decay factor for the tree decay
 	// Set some slacktime for the search to ensure on time return of move
 	private int slackTime = 5; // Slack on simulations
 	private final int finalSlackTime = 1; // Total slack time
@@ -40,144 +39,8 @@ public class MyPacMan extends Controller<MOVE> {
 	private boolean atJunction = false, prevLocationWasJunction = false,
 			nextMoveTargetSelection = false;
 	//
-	private final boolean[] ghostsAtJunctions = new boolean[4],
-			ghostsAtInitial = new boolean[4];
+	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
 	private final int[] ghostJunctions = new int[4];
-
-	/**
-	 * Move strategy which is used when no suitable move could be determined by
-	 * MCT selection
-	 * 
-	 * @return Move that maximizes the distance from the nearest angry ghost
-	 */
-	private MOVE fastMove() {
-		int[] reds = new int[Constants.NUM_GHOSTS];
-		int r = 0;
-		for (GHOST g : GHOST.values()) {
-			if (!gameState.isGhostEdible(g)) {
-				reds[r] = gameState.getGhostCurrentNodeIndex(g);
-				r++;
-			}
-		}
-		int[] ghosts = new int[r];
-		System.arraycopy(reds, 0, ghosts, 0, r);
-
-		int target = gameState.getClosestNodeIndexFromNodeIndex(
-				gameState.getPacmanCurrentNodeIndex(), ghosts, DM.PATH);
-		return gameState.getNextMoveAwayFromTarget(
-				gameState.getPacmanCurrentNodeIndex(), target, DM.PATH);
-	}
-
-	/**
-	 * Returns true if there are edible ghosts in pacman's range
-	 * 
-	 * @return true if edible ghost in range
-	 */
-	private boolean feasableBlueGhost() {
-		int pacLoc = gameState.getPacmanCurrentNodeIndex();
-		boolean feasableGhost = false;
-		for (GHOST g : GHOST.values()) {
-			if (gameState.isGhostEdible(g)
-					&& gameState.getGhostLairTime(g) == 0) {
-				//
-				int dist = gameState.getShortestPathDistance(pacLoc,
-						gameState.getGhostCurrentNodeIndex(g))
-						- (Constants.EAT_DISTANCE * 2);
-				feasableGhost = (dist <= gameState.getGhostEdibleTime(g));
-				if (feasableGhost)
-					break;
-			}
-		}
-
-		return feasableGhost;
-	}
-
-	double maxScore = 0.f;
-
-	private MCTNode getBestChild(MCTNode[] children, SelectionType selectionType) {
-		maxScore = 0.f;
-		MCTNode selectedChild = null;
-		if (DEBUG)
-			System.out.println("[2] Selectiontype: " + selectionType);
-		for (MCTNode c : children) {
-			if (DEBUG) {
-				System.out.println(c);
-			}
-			//
-			double score = 0.f;
-			if (selectionType == SelectionType.GhostScore) {
-				// Don't consider unsafe children
-				if (c.getMaxSurvivalRate() < safetyT) {
-					continue;
-				}
-				if (c.getPathDirection().opposite() == gameState
-						.getPacmanLastMoveMade()
-						|| c.getPathDirection() == gameState
-								.getPacmanLastMoveMade().opposite()) {
-					score = c.getMaxGhostScore() * reversePenalty * c.getMaxSurvivalRate();
-				} else {
-					score = c.getMaxGhostScore() * c.getMaxSurvivalRate();
-				}
-			} else if (selectionType == SelectionType.PillScore) {
-				// Don't consider unsafe children
-				if (c.getMaxSurvivalRate() < safetyT) {
-					continue;
-				}
-				if (c.getPathDirection().opposite() == gameState
-						.getPacmanLastMoveMade()
-						|| c.getPathDirection() == gameState
-								.getPacmanLastMoveMade().opposite()) {
-					score = c.getMaxPillScore() * reversePenalty * c.getMaxSurvivalRate();
-				} else {
-					score = c.getMaxPillScore() * c.getMaxSurvivalRate();
-				}
-			} else {
-				// For maximum selection
-				score = c.getMaxSurvivalRate();
-			}
-			//
-			if (score > maxScore) {
-				maxScore = score;
-				selectedChild = c;
-			}
-		}
-
-		if (DEBUG) {
-			System.out.println("[2] Max score: " + maxScore);
-		}
-		moves++;
-		return selectedChild;
-	}
-
-	/**
-	 * Returns the forward move if pacman is on an edge!
-	 * 
-	 * @return
-	 */
-	private MOVE getEdgeForwardMove() {
-		return gameState.getPossibleMoves(
-				gameState.getPacmanCurrentNodeIndex(),
-				gameState.getPacmanLastMoveMade())[0];
-	}
-
-	/**
-	 * Returns the reverse move if pac-man is on an edge
-	 * 
-	 * @return
-	 */
-	private MOVE getEdgeReverseMove() {
-		MOVE forward = gameState.getPossibleMoves(
-				gameState.getPacmanCurrentNodeIndex(),
-				gameState.getPacmanLastMoveMade())[0];
-		MOVE[] allMoves = gameState.getPossibleMoves(gameState
-				.getPacmanCurrentNodeIndex());
-		for (int i = 0; i < allMoves.length; i++) {
-			if (allMoves[i] != forward) {
-				return allMoves[i];
-			}
-		}
-		return null;
-	}
 
 	// Counters etc..
 	private int earlyCount = 0, lastJunction = -1, currentMaze = -1,
@@ -190,7 +53,7 @@ public class MyPacMan extends Controller<MOVE> {
 	private Edge[][] graph = null;
 	private DiscreteGame dGame = null;
 	private Game gameState;
-	private SinglePlayerNode root;
+	private SinglePlayerNode root, lastJunctionRoot;
 	private Edge currentPacmanEdge;
 	private SelectionType selectionType;
 
@@ -255,8 +118,9 @@ public class MyPacMan extends Controller<MOVE> {
 		setSelectionType();
 		maxPathLength = reuseMaxPathLength;
 		//
-		if (gameState.wasPacManEaten() || gameState.getCurrentLevelTime() == 0
-				|| root == null) {
+//		root = new SinglePlayerNode(dGame, gameState);
+		// re-use the game tree
+		if (gameState.wasPacManEaten() || gameState.getCurrentLevelTime() == 0 || root == null) {
 			root = new SinglePlayerNode(dGame, gameState);
 		} else if (root != null && root.getChildren() == null) {
 			root = new SinglePlayerNode(dGame, gameState);
@@ -319,8 +183,7 @@ public class MyPacMan extends Controller<MOVE> {
 			newChildren[1].pathLength = 0;
 			newChildren[1].addDistance(1);
 			// Array to temporarily store the new children for the old root in.
-			MCTNode[] newReverseChildren = new MCTNode[newChildren[1]
-					.getChildren().length - 1];
+			MCTNode[] newReverseChildren = new MCTNode[newChildren[1].getChildren().length - 1];
 			int i = 0, k = 0;
 			// This node still has the forwardChild as one of its children.
 			while (k < newReverseChildren.length) {
@@ -457,9 +320,138 @@ public class MyPacMan extends Controller<MOVE> {
 				}
 				earlyCount = 0;
 			}
-		}		
+		}
+		//
+		if(root != null && gameState.isJunction(gameState.getPacmanCurrentNodeIndex()))
+			lastJunctionRoot = root;
 		//
 		return move;
+	}
+
+	/**
+	 * Move strategy which is used when no suitable move could be determined by MCT selection
+	 * 
+	 * @return Move that maximizes the distance from the nearest angry ghost
+	 */
+	private MOVE fastMove() {
+		int[] reds = new int[Constants.NUM_GHOSTS];
+		int r = 0;
+		for (GHOST g : GHOST.values()) {
+			if (!gameState.isGhostEdible(g)) {
+				reds[r] = gameState.getGhostCurrentNodeIndex(g);
+				r++;
+			}
+		}
+		int[] ghosts = new int[r];
+		System.arraycopy(reds, 0, ghosts, 0, r);
+
+		int target = gameState.getClosestNodeIndexFromNodeIndex(
+				gameState.getPacmanCurrentNodeIndex(), ghosts, DM.PATH);
+		return gameState.getNextMoveAwayFromTarget(gameState.getPacmanCurrentNodeIndex(), target,
+				DM.PATH);
+	}
+
+	/**
+	 * Returns true if there are edible ghosts in pacman's range
+	 * 
+	 * @return true if edible ghost in range
+	 */
+	private boolean feasableBlueGhost() {
+		int pacLoc = gameState.getPacmanCurrentNodeIndex();
+		boolean feasableGhost = false;
+		for (GHOST g : GHOST.values()) {
+			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
+				//
+				int dist = gameState.getShortestPathDistance(pacLoc,
+						gameState.getGhostCurrentNodeIndex(g))
+						- (Constants.EAT_DISTANCE * 2);
+				feasableGhost = (dist <= gameState.getGhostEdibleTime(g));
+				if (feasableGhost)
+					break;
+			}
+		}
+
+		return feasableGhost;
+	}
+
+	double maxScore = 0.f;
+
+	private MCTNode getBestChild(MCTNode[] children, SelectionType selectionType) {
+		maxScore = 0.f;
+		MCTNode selectedChild = null;
+		if (DEBUG)
+			System.out.println("[2] Selectiontype: " + selectionType);
+		for (MCTNode c : children) {
+			if (DEBUG) {
+				System.out.println(c);
+			}
+			//
+			double score = 0.f;
+			if (selectionType == SelectionType.GhostScore) {
+				// Don't consider unsafe children
+				if (c.getMaxSurvivalRate() < safetyT) {
+					continue;
+				}
+				if (c.getPathDirection().opposite() == gameState.getPacmanLastMoveMade()
+						|| c.getPathDirection() == gameState.getPacmanLastMoveMade().opposite()) {
+					score = c.getMaxGhostScore() * reversePenalty * c.getMaxSurvivalRate();
+				} else {
+					score = c.getMaxGhostScore() * c.getMaxSurvivalRate();
+				}
+			} else if (selectionType == SelectionType.PillScore) {
+				// Don't consider unsafe children
+				if (c.getMaxSurvivalRate() < safetyT) {
+					continue;
+				}
+				if (c.getPathDirection().opposite() == gameState.getPacmanLastMoveMade()
+						|| c.getPathDirection() == gameState.getPacmanLastMoveMade().opposite()) {
+					score = c.getMaxPillScore() * reversePenalty * c.getMaxSurvivalRate();
+				} else {
+					score = c.getMaxPillScore() * c.getMaxSurvivalRate();
+				}
+			} else {
+				// For maximum selection
+				score = c.getMaxSurvivalRate();
+			}
+			//
+			if (score > maxScore) {
+				maxScore = score;
+				selectedChild = c;
+			}
+		}
+		//
+		if (DEBUG) {
+			System.out.println("[2] Max score: " + maxScore);
+		}
+		moves++;
+		return selectedChild;
+	}
+
+	/**
+	 * Returns the forward move if pacman is on an edge!
+	 * 
+	 * @return
+	 */
+	private MOVE getEdgeForwardMove() {
+		return gameState.getPossibleMoves(gameState.getPacmanCurrentNodeIndex(),
+				gameState.getPacmanLastMoveMade())[0];
+	}
+
+	/**
+	 * Returns the reverse move if pac-man is on an edge
+	 * 
+	 * @return
+	 */
+	private MOVE getEdgeReverseMove() {
+		MOVE forward = gameState.getPossibleMoves(gameState.getPacmanCurrentNodeIndex(),
+				gameState.getPacmanLastMoveMade())[0];
+		MOVE[] allMoves = gameState.getPossibleMoves(gameState.getPacmanCurrentNodeIndex());
+		for (int i = 0; i < allMoves.length; i++) {
+			if (allMoves[i] != forward) {
+				return allMoves[i];
+			}
+		}
+		return null;
 	}
 
 	private boolean angryGhostNear() {
@@ -471,60 +463,50 @@ public class MyPacMan extends Controller<MOVE> {
 
 			int distance = 0;
 			if (gameState.getGhostLairTime(g) == 0) {
-				distance = gameState.getShortestPathDistance(ghostLoc,
-						pacLocation, ghostDir)
+				distance = gameState.getShortestPathDistance(ghostLoc, pacLocation, ghostDir)
 						+ gameState.getGhostEdibleTime(g);
 			} else {
 				ghostLoc = gameState.getGhostInitialNodeIndex();
-				distance = gameState.getShortestPathDistance(
-						gameState.getGhostInitialNodeIndex(), pacLocation,
-						ghostDir) + gameState.getGhostEdibleTime(g);
+				distance = gameState.getShortestPathDistance(gameState.getGhostInitialNodeIndex(),
+						pacLocation, ghostDir) + gameState.getGhostEdibleTime(g);
 			}
 			//
 			if (distance <= 10) {
-				if ((distance - Constants.EAT_DISTANCE) > dGame
-						.pacManDistanceToHeading() + 1) {
+				if ((distance - Constants.EAT_DISTANCE) > dGame.pacManDistanceToHeading() + 1) {
 					// System.out.println("Closer to junction than ghost to me.");
 					continue;
 				}
 				// The ghost is near the pacman
 				MOVE nextMove = gameState.getPossibleMoves(pacLocation,
 						gameState.getPacmanLastMoveMade())[0];
-				int nextLocation = gameState
-						.getNeighbour(pacLocation, nextMove);
+				int nextLocation = gameState.getNeighbour(pacLocation, nextMove);
 				int nextDistance = 0;
 				if (gameState.getGhostEdibleTime(g) > 0) {
-					nextDistance = gameState.getShortestPathDistance(
-							nextLocation, ghostLoc)
+					nextDistance = gameState.getShortestPathDistance(nextLocation, ghostLoc)
 							+ gameState.getGhostEdibleTime(g) - 1;
 				} else {
-					nextDistance = gameState.getShortestPathDistance(
-							nextLocation, ghostLoc);
+					nextDistance = gameState.getShortestPathDistance(nextLocation, ghostLoc);
 				}
 
 				//
 				if (nextDistance < distance) {
 					// Pac-Man is moving toward the ghost
-					MOVE nextGhostMove = gameState.getPossibleMoves(ghostLoc,
-							ghostDir)[0];
-					int nextGhostLocation = gameState.getNeighbour(ghostLoc,
-							nextGhostMove);
+					MOVE nextGhostMove = gameState.getPossibleMoves(ghostLoc, ghostDir)[0];
+					int nextGhostLocation = gameState.getNeighbour(ghostLoc, nextGhostMove);
 					//
 					int nextGhostDist = 0;
 					if (gameState.getGhostLairTime(g) == 0) {
-						nextGhostDist = gameState.getShortestPathDistance(
-								nextGhostLocation, pacLocation, nextGhostMove)
-								+ gameState.getGhostEdibleTime(g);
+						nextGhostDist = gameState.getShortestPathDistance(nextGhostLocation,
+								pacLocation, nextGhostMove) + gameState.getGhostEdibleTime(g);
 					} else {
 						if (gameState.getGhostEdibleTime(g) > 0) {
-							nextGhostDist = gameState.getShortestPathDistance(
-									nextGhostLocation, pacLocation,
-									nextGhostMove)
-									+ gameState.getGhostEdibleTime(g) - 1;
+							nextGhostDist = gameState.getShortestPathDistance(nextGhostLocation,
+									pacLocation, nextGhostMove)
+									+ gameState.getGhostEdibleTime(g)
+									- 1;
 						} else {
-							nextGhostDist = gameState.getShortestPathDistance(
-									nextGhostLocation, pacLocation,
-									nextGhostMove);
+							nextGhostDist = gameState.getShortestPathDistance(nextGhostLocation,
+									pacLocation, nextGhostMove);
 						}
 					}
 
@@ -563,10 +545,10 @@ public class MyPacMan extends Controller<MOVE> {
 			}
 			// Start a simulation using the path from the root.
 			MCTResult result;
-			result = simulationNode.simulate(simulation, maxSimulations
-					+ maxPathLength, selectionType, currentTarget);
+			result = simulationNode.simulate(simulation, maxSimulations + maxPathLength,
+					selectionType, currentTarget);
 			// Propagate the result from the expanded child to the root
-			simulationNode.backPropagate(result, selectionType);
+			simulationNode.backPropagate(result, selectionType, simulation.getTreePhaseSteps());
 		}
 	}
 
@@ -591,8 +573,7 @@ public class MyPacMan extends Controller<MOVE> {
 			//
 			boolean ghostSelection = false;
 			for (GHOST g : GHOST.values()) {
-				if (gameState.isGhostEdible(g)
-						&& gameState.getGhostLairTime(g) == 0) {
+				if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
 					ghostSelection = true;
 					break;
 				}
@@ -618,8 +599,7 @@ public class MyPacMan extends Controller<MOVE> {
 	}
 
 	/**
-	 * Updates the discrete gamestate based on the current gamestate before
-	 * move-selection
+	 * Updates the discrete gamestate based on the current gamestate before move-selection
 	 */
 	private void updateDiscreteGamePreMove() {
 		// First call should create a new discrete gamestate each game
@@ -628,8 +608,7 @@ public class MyPacMan extends Controller<MOVE> {
 			this.timesDiedInFirstMaze = 0;
 		}
 		// Either the game just started or pacman entered a new maze
-		if (gameState.getMazeIndex() != currentMaze
-				|| gameState.getTotalTime() == 0) {
+		if (gameState.getMazeIndex() != currentMaze || gameState.getTotalTime() == 0) {
 			dGame.setCurrentMaze(gameState);
 			graph = dGame.getGraph();
 			//
@@ -653,8 +632,7 @@ public class MyPacMan extends Controller<MOVE> {
 			simulation.deathCount = 0.;
 		}
 		// For easier ghosts
-		if (gameState.getMazeIndex() == 2
-				&& gameState.getPacmanNumberOfLivesRemaining() >= 2) {
+		if (gameState.getMazeIndex() == 2 && gameState.getPacmanNumberOfLivesRemaining() >= 2) {
 			ghostSelectScore = this.easyGhostSelectScore;
 			safetyT = this.easySafetyT;
 			simulation.setEasyMinGhostNorm();
@@ -714,8 +692,7 @@ public class MyPacMan extends Controller<MOVE> {
 			dGame.eatPill();
 		}
 		//
-		atJunction = gameState
-				.isJunction(gameState.getPacmanCurrentNodeIndex());
+		atJunction = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
 		// DEBUG = atJunction;
 		//
 		// if (nextMoveTargetSelection && atJunction) {
@@ -732,19 +709,17 @@ public class MyPacMan extends Controller<MOVE> {
 			currentPacmanEdge = graph[lastJunction][lastJunctionMove.ordinal()];
 		}
 
-		if (gameState.getTimeOfLastGlobalReversal() == (gameState
-				.getTotalTime() - 1) || gameState.wasPowerPillEaten()) {
+		if (gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)
+				|| gameState.wasPowerPillEaten()) {
 			dGame.reverseGhosts();
 		}
 
 		for (GHOST g : GHOST.values()) {
 			if (ghostsAtInitial[g.ordinal()]) {
-				dGame.setGhostEdgeToInitial(g.ordinal(),
-						gameState.getGhostLastMoveMade(g));
+				dGame.setGhostEdgeToInitial(g.ordinal(), gameState.getGhostLastMoveMade(g));
 			}
 
-			if (gameState.getGhostCurrentNodeIndex(g) == gameState
-					.getGhostInitialNodeIndex()) {
+			if (gameState.getGhostCurrentNodeIndex(g) == gameState.getGhostInitialNodeIndex()) {
 				ghostsAtInitial[g.ordinal()] = true;
 			} else {
 				ghostsAtInitial[g.ordinal()] = false;
@@ -754,8 +729,7 @@ public class MyPacMan extends Controller<MOVE> {
 				try {
 					if (dGame.getGraph()[ghostJunctions[g.ordinal()]][gameState
 							.getGhostLastMoveMade(g).ordinal()] != null) {
-						dGame.setGhostMove(g.ordinal(),
-								ghostJunctions[g.ordinal()],
+						dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()],
 								gameState.getGhostLastMoveMade(g));
 					}
 				} catch (Exception ex) {
@@ -765,8 +739,7 @@ public class MyPacMan extends Controller<MOVE> {
 			// Reset the ghost statuses
 			if (gameState.isJunction(gameState.getGhostCurrentNodeIndex(g))) {
 				this.ghostsAtJunctions[g.ordinal()] = true;
-				this.ghostJunctions[g.ordinal()] = gameState
-						.getGhostCurrentNodeIndex(g);
+				this.ghostJunctions[g.ordinal()] = gameState.getGhostCurrentNodeIndex(g);
 			} else {
 				this.ghostsAtJunctions[g.ordinal()] = false;
 			}

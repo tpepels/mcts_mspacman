@@ -19,14 +19,14 @@ import pacman.game.GameView;
  * @author Tom Pepels, Maastricht University
  */
 public class StrategySimulation implements MCTSimulation {
-	// TODO DEBUG
+	// DEBUG
 	private GameView gv;
 	// private final boolean DEBUG = false;
 	// private Game debugGameState;
 	// private DiscreteGame debugDGameState;
 	// !DEBUG
 	//
-	public static int minSteps = 2;
+	public static int minSteps = 1;
 	public static double pillPower = 1.3;
 	public static boolean trailGhost = false;
 	public static double sminGhostNorm = .5, sdecreasedMinGhostNorm = .4, easyMinGhostNorm = .6;
@@ -38,20 +38,22 @@ public class StrategySimulation implements MCTSimulation {
 	private Game gameState;
 	//
 	private boolean targetSelection = false;
-	private int target = -1, maxSimulations;
+	private int maxSimulations;
 	private int lastGoodTrailGhost = -1;
 	private boolean lastGoodTv = false, lastGoodTG = false;
 	//
-	private int distToTarget, pillsBefore, pacLocation, tempMaxSim;
+	private int pillsBefore, pacLocation, tempMaxSim;
 	private boolean nextMaze, followingPath;
-	private double pillNorm, ghostNorm, pillsEaten, edgePillsEaten, ghostsEaten, tempPills, tempGhosts, minGhostNorm;
+	private double pillNorm, ghostNorm, pillsEaten, edgePillsEaten, ghostsEaten, tempPills,
+			tempGhosts, minGhostNorm;
 	//
 	// Fields used for determining if pacman was trapped.
 	boolean frontBlocked, rearBlocked;
 	int pacHeading, pacRear, pacEdge, ghostJ, ghostEdge, ghostHeading, treePhase;
 	//
 	private int mazeBefore, pwrPillsBefore, currentEdgesVisited;
-	private boolean died, targetReached, atePower, ateGhost, illegalPP, edgeCleared, ghostAtInitial;
+	private boolean died, targetReached, atePower, ateGhost, illegalPP, edgeCleared,
+			ghostAtInitial;
 	private boolean[] ghostVector = new boolean[Constants.NUM_GHOSTS],
 			ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
 	private int[] edibleTimes = new int[Constants.NUM_GHOSTS];
@@ -73,6 +75,13 @@ public class StrategySimulation implements MCTSimulation {
 
 	public void setEasyMinGhostNorm() {
 		this.minGhostNorm = StrategySimulation.easyMinGhostNorm;
+	}
+
+	/**
+	 * The number of steps that were made in the tree-phase.
+	 */
+	public int getTreePhaseSteps() {
+		return treePhase;
 	}
 
 	/**
@@ -109,7 +118,8 @@ public class StrategySimulation implements MCTSimulation {
 		//
 		lastMove = gameState.getPacmanLastMoveMade();
 		currentEdgesVisited = dGame.getVisitedEdgeCount();
-		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMover.generateGhostMoves(gv != null));
+		gameState.advanceGameWithPowerPillReverseOnly(pacMove,
+				ghostMover.generateGhostMoves(gv != null));
 
 		// Check if pacman died this turn
 		died = gameState.wasPacManEaten();
@@ -160,23 +170,15 @@ public class StrategySimulation implements MCTSimulation {
 			pillsEaten++;
 			// Check if the edge is cleared.
 			if (dGame.getVisitedEdgeCount() > currentEdgesVisited) {
-				edgePillsEaten += Math.pow(dGame.getEdgeList()[dGame.getCurrentPacmanEdgeId()].pillCount, pillPower);
+				edgePillsEaten += Math.pow(
+						dGame.getEdgeList()[dGame.getCurrentPacmanEdgeId()].pillCount, pillPower);
 				edgeCleared = true;
 			}
 		}
-
 		// Check if ghosts reversed
 		if (gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)) {
 			dGame.reverseGhosts();
 		}
-
-		// Check if target was reached.
-		// if (targetSelection) {
-		// if (pacLocation == target) {
-		// targetReached = true;
-		// }
-		// }
-
 		// Check if ghosts were eaten.
 		ateGhost = false;
 		if (gameState.getNumGhostsEaten() > 0) {
@@ -212,7 +214,8 @@ public class StrategySimulation implements MCTSimulation {
 		// blocked
 		if (dGame.getCurrentPacmanEdge() != null) {
 			if (dGame.getCurrentPacmanEdge().powerPill) {
-				if (gameState.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
+				if (gameState
+						.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
 					return false;
 				}
 			}
@@ -259,8 +262,8 @@ public class StrategySimulation implements MCTSimulation {
 	}
 
 	@Override
-	public MCTResult playout(DiscreteGame discreteGame, Game state, MOVE[] pathMoves, int[] pacLocations, int maxSims,
-			SelectionType selectionType) {
+	public MCTResult playout(DiscreteGame discreteGame, Game state, MOVE[] pathMoves,
+			int[] pacLocations, int maxSims, SelectionType selectionType) {
 		//
 		this.selectionType = selectionType;
 		this.gameState = state;
@@ -292,13 +295,6 @@ public class StrategySimulation implements MCTSimulation {
 		}
 		//
 		pacManMover = new PacManMover(gameState, dGame);
-		//
-		if (targetSelection) {
-			distToTarget = gameState.getShortestPathDistance(pacLocation, target);
-		} else {
-			distToTarget = 0;
-		}
-
 		// Set the pre-game variables, these will be used for scoring later
 		pillsBefore = gameState.getNumberOfActivePills();
 		mazeBefore = gameState.getMazeIndex();
@@ -363,14 +359,16 @@ public class StrategySimulation implements MCTSimulation {
 			// If there is a power-pill on the current edge, stop following path
 			if (dGame.getCurrentPacmanEdge() != null && selectionType == SelectionType.GhostScore) {
 				if (dGame.getCurrentPacmanEdge().powerPill) {
-					if (gameState.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
+					if (gameState
+							.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
 						break;
 					}
 				}
 			}
 			// Follow the chosen path!
 			while (pacLocation != destination) {
-				pacMove = gameState.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0];
+				pacMove = gameState
+						.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0];
 				//
 				advanceGame();
 				maxSimulations--;
@@ -474,23 +472,18 @@ public class StrategySimulation implements MCTSimulation {
 			//
 			if ((pillsEaten > 0 || edgePillsEaten > 0) && selectionType != SelectionType.GhostScore) {
 				pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
-			} else if (targetSelection) {
-				// Get the distance-score to the target
-				int curDistance = gameState.getShortestPathDistance(pacLocation, target);
-				if (curDistance < distToTarget && !died) {
-					pillNorm = 1. - (double) (distToTarget - curDistance) / (double) distToTarget;
-				}
 			}
 		}
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
 			//
 			double ghostDivisor = Constants.NUM_GHOSTS
-					* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION, gameState.getCurrentLevel()
-							% Constants.LEVEL_RESET_REDUCTION)));
+					* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
+							gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
 			ghostNorm = ghostsEaten / ghostDivisor;
 			//
-			if (pwrPillsBefore > gameState.getNumberOfActivePowerPills() && ghostNorm < minGhostNorm) {
+			if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()
+					&& ghostNorm < minGhostNorm) {
 				// Penalty is a lower pill score when pp was eaten, but not enough ghosts
 				pillNorm /= 5.;
 				ghostNorm /= 5.;
@@ -506,14 +499,10 @@ public class StrategySimulation implements MCTSimulation {
 	}
 
 	@Override
-	public MCTResult playout(DiscreteGame dGame, Game state, MOVE[] pathMoves, int[] pacLocations, int maxSimulations,
-			SelectionType selectionType, int target) {
-		this.targetSelection = true;
-		this.target = target;
-		MCTResult result = playout(dGame, state, pathMoves, pacLocations, maxSimulations, selectionType);
-		// Reset the target selection state
-		this.targetSelection = false;
-		this.target = -1;
+	public MCTResult playout(DiscreteGame dGame, Game state, MOVE[] pathMoves, int[] pacLocations,
+			int maxSimulations, SelectionType selectionType, int target) {
+		MCTResult result = playout(dGame, state, pathMoves, pacLocations, maxSimulations,
+				selectionType);
 		return result;
 	}
 }
