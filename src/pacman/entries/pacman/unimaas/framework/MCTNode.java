@@ -19,8 +19,11 @@ public abstract class MCTNode {
 	public Edge edge;
 	//
 	public int depth = 0, pathLength, junctionIndex;
-	// Scores
-	public double maxPillScore, maxGhostScore, maxSurvivals, maxVisitCount, maxTurnVisits;
+	// Scores [pill, ghost, survival]
+	public double[] maxScores, meanScores, currentScores;
+	public double totalVisitCount, maxVisitCount, currentVisitCount;
+	
+	public double maxPillScore, maxGhostScore, maxSurvivals, maxTurnVisits;
 	public double visitCount, turnVisitCount, pillScore, ghostScore, survivals;
 	private double currentSurvivals = 0, maxCurrentSurvivals = 0;
 
@@ -170,9 +173,10 @@ public abstract class MCTNode {
 			// score
 			MCTNode topChild = null;
 			double topRate = Double.NEGATIVE_INFINITY;
-
+			double childrenVCount = 0.;
 			for (MCTNode child : node.getChildren()) {
-				// Do not use values of pruned children
+				childrenVCount += child.getVisitCount();
+				//
 				if (selectionType == SelectionType.TargetRate) {
 					if (child.getMaxSurvivalRate() > topRate) {
 						topChild = child;
@@ -189,6 +193,20 @@ public abstract class MCTNode {
 						topRate = child.getMaxGhostScore() * child.getMaxSurvivalRate();
 					}
 				}
+			}
+
+			// The children didn't have enough visits compared to this node,
+			// therefore don't use their values to backpropagate
+			if (childrenVCount / getVisitCount() < minChildVisitRate) {
+				node.maxSurvivals = node.survivals;
+				node.maxPillScore = node.pillScore;
+				node.maxGhostScore = node.ghostScore;
+				//
+				node.maxVisitCount = node.visitCount;
+				node.maxCurrentSurvivals = node.currentSurvivals;
+				node.maxTurnVisits = node.turnVisitCount;
+				node = node.getParentNode();
+				continue;
 			}
 			//
 			node.maxSurvivals = topChild.maxSurvivals;

@@ -14,7 +14,7 @@ import pacman.game.Constants.*;
 
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
-	private final boolean DEBUG = true;
+	private boolean DEBUG = true;
 	// To use different simulation strategy or selection, set them here.
 	private final StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
@@ -27,7 +27,7 @@ public class MyPacMan extends Controller<MOVE> {
 	// penalties and discounts
 	private double reversePenalty = .7; // The reward penalty for selecting a
 										// reverse move
-	private double discount = .8; // Decay factor for the tree decay
+	private double discount = .7; // Decay factor for the tree decay
 	// Set some slacktime for the search to ensure on time return of move
 	private int slackTime = 5; // Slack on simulations
 	private final int finalSlackTime = 1; // Total slack time
@@ -693,7 +693,7 @@ public class MyPacMan extends Controller<MOVE> {
 		}
 		//
 		atJunction = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
-		// DEBUG = atJunction;
+		DEBUG = atJunction;
 		//
 		// if (nextMoveTargetSelection && atJunction) {
 		// currentTarget = getTarget();
