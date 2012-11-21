@@ -20,7 +20,6 @@ public class SinglePlayerNode extends MCTNode {
 
 	private final int retries = 5; // How many times to retry if death in path
 									// to follow
-	private final double forwardScore = 0.5;
 
 	public SinglePlayerNode(DiscreteGame dGame, Game gameState) {
 		super(dGame, gameState);
@@ -94,10 +93,6 @@ public class SinglePlayerNode extends MCTNode {
 			MCTNode forwardNode = new SinglePlayerNode(gameState, this, forward,
 					dGame.getCurrentPacmanEdge(), dGame.getPacHeading(),
 					dGame.pacManDistanceToHeading());
-
-			forwardNode.ghostScore += forwardScore;
-			forwardNode.pillScore += forwardScore;
-			forwardNode.addVisit();
 
 			MCTNode reverseNode = new SinglePlayerNode(gameState, this, reverse,
 					dGame.getCurrentPacmanEdge(), dGame.getPacRear(), dGame.pacManDistanceToRear());
