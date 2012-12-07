@@ -1,5 +1,7 @@
 package pacman.entries.pacman.unimaas.simulation;
 
+import java.util.EnumMap;
+
 import pacman.entries.pacman.unimaas.framework.CauseOfDeath;
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
 import pacman.entries.pacman.unimaas.framework.MCTResult;
@@ -20,7 +22,7 @@ import pacman.game.GameView;
  */
 public class StrategySimulation implements MCTSimulation {
 	// DEBUG
-	private GameView gv;
+	// private GameView gv;
 	// private final boolean DEBUG = false;
 	// private Game debugGameState;
 	// private DiscreteGame debugDGameState;
@@ -52,8 +54,7 @@ public class StrategySimulation implements MCTSimulation {
 	int pacHeading, pacRear, pacEdge, ghostJ, ghostEdge, ghostHeading, treePhase;
 	//
 	private int mazeBefore, pwrPillsBefore, currentEdgesVisited;
-	private boolean died, targetReached, atePower, ateGhost, illegalPP, edgeCleared,
-			ghostAtInitial;
+	private boolean died, targetReached, atePower, ateGhost, illegalPP;
 	private boolean[] ghostVector = new boolean[Constants.NUM_GHOSTS],
 			ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
 	private int[] edibleTimes = new int[Constants.NUM_GHOSTS];
@@ -84,58 +85,66 @@ public class StrategySimulation implements MCTSimulation {
 		return treePhase;
 	}
 
+	boolean[] ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS];
+	int[] ghostJunctions = new int[Constants.NUM_GHOSTS];
+	private EnumMap<GHOST, MOVE> ghostMoves = new EnumMap<GHOST, MOVE>(GHOST.class);
+
 	/**
 	 * Advances the current game-state by 1 time-unit.
 	 */
 	private void advanceGame() {
-		ghostAtInitial = false;
 		// Store the edible time for each edible ghost.
 		for (GHOST g : GHOST.values()) {
-			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
-				edibleTimes[g.ordinal()] = gameState.getGhostEdibleTime(g);
+			// Reset ghosts that were at initial index
+			if (ghostsAtInitial[g.ordinal()]) {
+				dGame.setGhostEdgeToInitial(g.ordinal(), gameState.getGhostLastMoveMade(g));
 			}
-			//
+			// Remember the decisions that ghosts made at junctions
+			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)) {
+				dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()],
+						ghostMoves.get(g));
+			}
+			// Reset the ghost statuses
+			if (gameState.isJunction(gameState.getGhostCurrentNodeIndex(g))) {
+				ghostsAtJunctions[g.ordinal()] = true;
+				ghostJunctions[g.ordinal()] = gameState.getGhostCurrentNodeIndex(g);
+			} else {
+				ghostsAtJunctions[g.ordinal()] = false;
+			}
+			// Check if any ghosts are at the initial ghost-index
 			if (gameState.getGhostCurrentNodeIndex(g) == gameState.getGhostInitialNodeIndex()) {
 				ghostsAtInitial[g.ordinal()] = true;
-				ghostAtInitial = true;
 			} else {
 				ghostsAtInitial[g.ordinal()] = false;
 			}
+			// Remember if a ghost was edible for scoring using edible times
+			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
+				edibleTimes[g.ordinal()] = gameState.getGhostEdibleTime(g);
+			}
 		}
-
+		ghostMoves.clear();
 		//
 		if (!followingPath) { // If this is the case, pacmove is predetermined
 			pacMove = pacManMover.generatePacManMove(selectionType);
-			//
-			// if (gameState.isJunction(pacLocation)) {
-			// //
-			// this.debugDGameState = dGame.copy();
-			// this.debugGameState = gameState.copy();
-			// lastJTime = gameState.getCurrentLevelTime();
-			// lastJMove = pacMove;
-			// }
 		}
 		//
 		lastMove = gameState.getPacmanLastMoveMade();
 		currentEdgesVisited = dGame.getVisitedEdgeCount();
-		gameState.advanceGameWithPowerPillReverseOnly(pacMove,
-				ghostMover.generateGhostMoves(gv != null));
+		ghostMoves = ghostMover.generateGhostMoves(false);
+		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMoves);
 
 		// Check if pacman died this turn
 		died = gameState.wasPacManEaten();
+		//
 		if (died)
 			return;
 		// Check if the next maze was reached
 		nextMaze = gameState.getMazeIndex() != mazeBefore;
 		if (nextMaze)
 			return;
-		//
-		if (ghostAtInitial) {
-			for (GHOST g : GHOST.values()) {
-				if (ghostsAtInitial[g.ordinal()]) {
-					dGame.setGhostEdgeToInitial(g.ordinal(), gameState.getGhostLastMoveMade(g));
-				}
-			}
+		// Check if ghosts reversed
+		if (gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)) {
+			dGame.reverseGhosts();
 		}
 		//
 		if (gameState.isJunction(pacLocation)) {
@@ -149,21 +158,19 @@ public class StrategySimulation implements MCTSimulation {
 			// this is used for distance measurements.
 			dGame.increaseTimeCurrentEdge();
 		}
-
-		if (gv != null) {
-			try {
-				Thread.sleep(40);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			gv.repaint();
-		}
-
+		//
+		// if (gv != null) {
+		// try {
+		// Thread.sleep(40);
+		// } catch (InterruptedException e) {
+		// // TODO Auto-generated catch block
+		// e.printStackTrace();
+		// }
+		// gv.repaint();
+		// }
 		//
 		pacLocation = gameState.getPacmanCurrentNodeIndex();
 		//
-		edgeCleared = false;
 		if (gameState.wasPillEaten()) {
 			dGame.eatPill();
 			// pillsEaten += Math.pow(.999, maxSimulations);
@@ -172,12 +179,7 @@ public class StrategySimulation implements MCTSimulation {
 			if (dGame.getVisitedEdgeCount() > currentEdgesVisited) {
 				edgePillsEaten += Math.pow(
 						dGame.getEdgeList()[dGame.getCurrentPacmanEdgeId()].pillCount, pillPower);
-				edgeCleared = true;
 			}
-		}
-		// Check if ghosts reversed
-		if (gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)) {
-			dGame.reverseGhosts();
 		}
 		// Check if ghosts were eaten.
 		ateGhost = false;
@@ -257,7 +259,6 @@ public class StrategySimulation implements MCTSimulation {
 				}
 			}
 		}
-
 		return frontBlocked && rearBlocked;
 	}
 
@@ -269,6 +270,9 @@ public class StrategySimulation implements MCTSimulation {
 		this.gameState = state;
 		this.dGame = discreteGame;
 		this.maxSimulations = maxSims;
+		ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS];
+		ghostJunctions = new int[Constants.NUM_GHOSTS];
+		ghostMoves.clear();
 		gameCount++;
 		// debugGameState = null;
 		// debugDGameState = null;

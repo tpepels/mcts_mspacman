@@ -5,55 +5,43 @@ import pacman.entries.pacman.unimaas.framework.MCTSelection;
 import pacman.entries.pacman.unimaas.framework.SelectionType;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
 
-/**
- * 
- * @author Tom Pepels, Maastricht University
- */
 public class UCTSelection implements MCTSelection {
 
-	public static double uctConstant = 1., alpha = 0.4;
-	private static double current_alpha = alpha;
+	public static double C = 1., alpha = 0.7;
 	public static int minVisits = 10;
-	private SelectionType selectionType = SelectionType.TargetRate;
-	private final double eps = 0.0001;
+	private SelectionType selectionType = SelectionType.SurvivalRate;
 
 	@Override
-	public MCTNode selectNode(MCTNode parent, boolean maxSelection) {
+	public MCTNode selectNode(MCTNode P, boolean maxSelection) {
 
 		MCTNode selectedNode = null;
 		double bestValue = Double.NEGATIVE_INFINITY;
-		MCTNode[] children = parent.getChildren();
-		//
-		if(selectionType == SelectionType.GhostScore)
-			current_alpha = 0.;
-		else
-			current_alpha = 0.4;
+		MCTNode[] children = P.getChildren();
 		//
 		for (MCTNode c : children) {
-
-			double uctValue = 0., nodeScore = 0., currentNodeScore = 0.;
+			double uctValue = 0., Vt = 0., Vc = 0.;
 
 			if (maxSelection) {
 				if (selectionType == SelectionType.GhostScore) {
-					nodeScore = c.getMaxGhostScore() * c.getMaxSurvivalRate();
-					currentNodeScore = c.getCurrentMaxGhostScore() * c.getCurrentMaxSurvivals();
+					Vt = c.getMaxGhostScore() * c.getMaxSurvivalRate();
+					Vc = c.getCurrentMaxGhostScore() * c.getCurrentMaxSurvivals();
 				} else if (selectionType == SelectionType.PillScore) {
-					nodeScore = c.getMaxPillScore() * c.getMaxSurvivalRate();
-					currentNodeScore = c.getCurrentMaxPillScore() * c.getCurrentMaxSurvivals();
+					Vt = c.getMaxPillScore() * c.getMaxSurvivalRate();
+					Vc = c.getCurrentMaxPillScore() * c.getCurrentMaxSurvivals();
 				} else {
-					nodeScore = c.getMaxSurvivalRate();
-					currentNodeScore = c.getCurrentMaxSurvivals();
+					Vt = c.getMaxSurvivalRate();
+					Vc = c.getCurrentMaxSurvivals();
 				}
 			} else {
 				if (selectionType == SelectionType.GhostScore) {
-					nodeScore = c.getGhostScore() * c.getSurvivalRate();
-					currentNodeScore = c.getCurrentMeanGhostScore() * c.getCurrentMeanSurvivals();
+					Vt = c.getGhostScore() * c.getSurvivalRate();
+					Vc = c.getCurrentMeanGhostScore() * c.getCurrentMeanSurvivals();
 				} else if (selectionType == SelectionType.PillScore) {
-					nodeScore = c.getPillScore() * c.getSurvivalRate();
-					currentNodeScore = c.getCurrentMeanPillScore() * c.getCurrentMeanSurvivals();
+					Vt = c.getPillScore() * c.getSurvivalRate();
+					Vc = c.getCurrentMeanPillScore() * c.getCurrentMeanSurvivals();
 				} else {
-					nodeScore = c.getSurvivalRate();
-					currentNodeScore = c.getCurrentMeanSurvivals();
+					Vt = c.getSurvivalRate();
+					Vc = c.getCurrentMeanSurvivals();
 				}
 			}
 
@@ -62,13 +50,10 @@ public class UCTSelection implements MCTSelection {
 				// Give an unvisited node a high value s.t. it is selected.
 				uctValue = 100.0 + (XSRandom.r.nextDouble() * 10.0);
 			} else {
-				uctValue = current_alpha
-						* (nodeScore + (uctConstant * Math.sqrt(Math.log(parent.getVisitCount())
-								/ c.getVisitCount())))
-						+ ((1 - current_alpha) 
-								* (currentNodeScore + (uctConstant * Math.sqrt(Math
-								.log(parent.getCurrentVisitCount()) / c.getCurrentVisitCount()))))
-						+ (XSRandom.r.nextDouble() * eps); // Tie breaker
+				uctValue = alpha
+						* (Vt + (C * Math.sqrt(Math.log(P.getVisitCount()) / c.getVisitCount())))
+						+ ((1 - alpha) * (Vc + (C * Math.sqrt(Math.log(P.getCurrentVisitCount())
+								/ c.getCurrentVisitCount()))));
 			}
 
 			// Select the highest value
@@ -81,14 +66,6 @@ public class UCTSelection implements MCTSelection {
 		selectedNode.addVisit();
 		//
 		return selectedNode;
-	}
-
-	/**
-	 * @param minVisits
-	 *            The minimum number of visits before UCT starts
-	 */
-	public void setMinVisits(int minVisits) {
-		UCTSelection.minVisits = minVisits;
 	}
 
 	@Override

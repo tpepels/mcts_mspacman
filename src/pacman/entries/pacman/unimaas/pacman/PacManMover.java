@@ -11,8 +11,6 @@ import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
 public class PacManMover {
-	// private Game debugGameState;
-	// private DiscreteGame debugDGameState;
 	//
 	public static int ghostDistT = 6;
 	//
@@ -29,8 +27,8 @@ public class PacManMover {
 
 	private final int[] blues = new int[Constants.NUM_GHOSTS];
 
-	int pacHeading, ghostJ, ghostHeading, pacDistance, ghostLoc, ghostDistance, distance, nextLocation, nextDistance,
-			nextGhostLocation, nextGhostDist;
+	int pacHeading, ghostJ, ghostHeading, pacDistance, ghostLoc, ghostDistance, distance,
+			nextLocation, nextDistance, nextGhostLocation, nextGhostDist;
 
 	MOVE ghostDir, nextMove, nextGhostMove;
 
@@ -44,7 +42,8 @@ public class PacManMover {
 	}
 
 	private boolean angryGhostNear() {
-		return angryGhostNear(gameState.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0],
+		return angryGhostNear(
+				gameState.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0],
 				ghostDistT, false);
 	}
 
@@ -60,13 +59,13 @@ public class PacManMover {
 					distance = gameState.getGhostEdibleTime(g);
 			} else {
 				ghostLoc = gameState.getGhostInitialNodeIndex();
-				distance = gameState.getShortestPathDistance(gameState.getGhostInitialNodeIndex(), pacLocation,
-						ghostDir) + (gameState.getGhostLairTime(g) - 1);
+				distance = gameState.getShortestPathDistance(gameState.getGhostInitialNodeIndex(),
+						pacLocation, ghostDir) + (gameState.getGhostLairTime(g) - 1);
 			}
 			//
 			if (distance <= dist) {
-				if ((distance - Constants.EAT_DISTANCE) > dGame.pacManDistanceToHeading() + 1 && !moveTwice) {
-					// System.out.println("Closer to junction than ghost to me.");
+				if ((distance - Constants.EAT_DISTANCE) > dGame.pacManDistanceToHeading() + 1
+						&& !moveTwice) {
 					continue;
 				}
 				// The ghost is near the pacman
@@ -90,13 +89,14 @@ public class PacManMover {
 					nextGhostLocation = gameState.getNeighbour(ghostLoc, nextGhostMove);
 					//
 					if (gameState.getGhostLairTime(g) == 0) {
-						nextGhostDist = gameState
-								.getShortestPathDistance(nextGhostLocation, pacLocation, nextGhostMove);
+						nextGhostDist = gameState.getShortestPathDistance(nextGhostLocation,
+								pacLocation, nextGhostMove);
 						if (gameState.getGhostEdibleTime(g) > nextGhostDist)
 							nextGhostDist = gameState.getGhostEdibleTime(g);
 					} else {
-						nextGhostDist = gameState.getShortestPathDistance(gameState.getGhostInitialNodeIndex(),
-								pacLocation, nextGhostMove) + (gameState.getGhostLairTime(g) - 1);
+						nextGhostDist = gameState.getShortestPathDistance(
+								gameState.getGhostInitialNodeIndex(), pacLocation, nextGhostMove)
+								+ (gameState.getGhostLairTime(g) - 1);
 					}
 					// The ghost is moving towards the pacman
 					if (nextGhostDist < distance && !nearPowerPill(pacLocation)) {
@@ -119,9 +119,10 @@ public class PacManMover {
 			for (GHOST g : GHOST.values()) {
 				if (gameState.getGhostEdibleTime(g) - 1 > 0) {
 					int distanceFromPacToGhost = gameState.getShortestPathDistance(
-							gameState.getNeighbour(pacJunction, pacMove), gameState.getGhostCurrentNodeIndex(g),
-							pacMove) + 1;
-					if (distanceFromPacToGhost - Constants.EAT_DISTANCE <= gameState.getGhostEdibleTime(g) - 1) {
+							gameState.getNeighbour(pacJunction, pacMove),
+							gameState.getGhostCurrentNodeIndex(g), pacMove) + 1;
+					if (distanceFromPacToGhost - Constants.EAT_DISTANCE <= gameState
+							.getGhostEdibleTime(g) - 1) {
 						continue;
 					}
 				}
@@ -136,42 +137,39 @@ public class PacManMover {
 					// The ghost is heading for pacman.
 					if (ghostHeading == pacJunction) {
 						if (graph[pacJunction][pacMove.ordinal()].powerPill) {
-							int ppindex = gameState.getPowerPillIndices()[graph[pacJunction][pacMove.ordinal()].powerPillIndex];
-							if (gameState
-									.isPowerPillStillAvailable(graph[pacJunction][pacMove.ordinal()].powerPillIndex)) {
+							int ppindex = gameState.getPowerPillIndices()[graph[pacJunction][pacMove
+									.ordinal()].powerPillIndex];
+							if (gameState.isPowerPillStillAvailable(graph[pacJunction][pacMove
+									.ordinal()].powerPillIndex)) {
+								//
 								int pacPillDist = gameState.getShortestPathDistance(
-										gameState.getNeighbour(pacJunction, pacMove), ppindex, pacMove) + 1;
+										gameState.getNeighbour(pacJunction, pacMove), ppindex,
+										pacMove) + 1;
+								//
 								int ghostPillDist = gameState.getShortestPathDistance(
 										gameState.getGhostCurrentNodeIndex(g), ppindex,
 										gameState.getGhostLastMoveMade(g));
+								//
 								if (pacPillDist < ghostPillDist) {
-									int pacGhostDist = gameState.getShortestPathDistance(pacJunction,
-											gameState.getGhostCurrentNodeIndex(g));
+									int pacGhostDist = gameState.getShortestPathDistance(
+											pacJunction, gameState.getGhostCurrentNodeIndex(g));
+									//
 									if (pacPillDist < pacGhostDist) {
-										// System.out
-										// .println("Pacman closer to powerpill than ghost!");
 										continue;
 									}
 
 								}
 							}
 						}
-
-						// System.out.println(pacMove +
-						// " ghost on edge, heading.");
 						return true;
 					}
 					if (gameState.getShortestPathDistance(gameState.getGhostCurrentNodeIndex(g),
-							gameState.getPacmanCurrentNodeIndex(), gameState.getGhostLastMoveMade(g)) < graph[pacJunction][pacMove
+							gameState.getPacmanCurrentNodeIndex(),
+							gameState.getGhostLastMoveMade(g)) < graph[pacJunction][pacMove
 							.ordinal()].length + 1) {
-
-						// System.out.println(pacMove +
-						// " ghost on edge, dist.");
 						return true;
 					}
 				} else if (gameState.getGhostCurrentNodeIndex(g) == pacHeading) {
-					// System.out.println(pacMove +
-					// " ghost on edge, junction.");
 					return true;
 				}
 			}
@@ -187,30 +185,30 @@ public class PacManMover {
 
 		int target = pacHeading;
 		pacDistance = graph[pacJunction][pacMove.ordinal()].length + 1;
-
-		// If there is a power pill on the edge, the target to measure is that
-		// powerpill's location
+		// If there is a power pill on the edge, the target to measure is that powerpill's location
 		if (graph[pacJunction][pacMove.ordinal()].powerPill) {
-			if (gameState.isPowerPillStillAvailable(graph[pacJunction][pacMove.ordinal()].powerPillIndex)) {
+			if (gameState
+					.isPowerPillStillAvailable(graph[pacJunction][pacMove.ordinal()].powerPillIndex)) {
 				target = gameState.getPowerPillIndices()[graph[pacJunction][pacMove.ordinal()].powerPillIndex];
-				pacDistance = gameState.getShortestPathDistance(gameState.getNeighbour(pacJunction, pacMove), target,
-						pacMove) + 1;
+				pacDistance = gameState.getShortestPathDistance(
+						gameState.getNeighbour(pacJunction, pacMove), target, pacMove) + 1;
 			}
 		}
 
 		for (GHOST g : GHOST.values()) {
 			int i = g.ordinal();
 
-			// if (gameState.getGhostLairTime(g) == 0) {
 			if (dGame.getGhostEdgeId(i) != graph[pacJunction][pacMove.ordinal()].uniqueId) {
 				ghostLoc = gameState.getGhostCurrentNodeIndex(g);
 				ghostDir = gameState.getGhostLastMoveMade(g);
 				//
 				if (gameState.getGhostLairTime(g) > 0) {
 					origDist = gameState.getGhostLairTime(g)
-							+ gameState.getShortestPathDistance(gameState.getGhostInitialNodeIndex(), target);
+							+ gameState.getShortestPathDistance(
+									gameState.getGhostInitialNodeIndex(), target);
 				} else {
-					if (ghostLoc == gameState.getGhostInitialNodeIndex() && ghostDir.equals(MOVE.NEUTRAL)) {
+					if (ghostLoc == gameState.getGhostInitialNodeIndex()
+							&& ghostDir.equals(MOVE.NEUTRAL)) {
 						origDist = gameState.getShortestPathDistance(ghostLoc, target);
 					} else {
 						origDist = gameState.getShortestPathDistance(ghostLoc, target, ghostDir);
@@ -219,16 +217,10 @@ public class PacManMover {
 					}
 				}
 				if (origDist - (Constants.EAT_DISTANCE) <= pacDistance) {
-
 					// Ghost is closer to the junction than pac man
-					// System.out.println(pacMove + " " + g +
-					// " ghost closer to junction.");
-					// System.out.println("Pac dist: " + pacDistance);
-					// System.out.println("Ghost dist: " + origDist);
 					return true;
 				}
 			}
-			// }
 		}
 		return false;
 	}
@@ -239,8 +231,9 @@ public class PacManMover {
 		int[] blue = new int[Constants.NUM_GHOSTS];
 		for (GHOST g : GHOST.values()) {
 			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
-				if (gameState.getShortestPathDistance(pacLocation, gameState.getGhostCurrentNodeIndex(g)) <= gameState
-						.getGhostEdibleTime(g) - (Constants.EAT_DISTANCE)) {
+				if (gameState.getShortestPathDistance(pacLocation,
+						gameState.getGhostCurrentNodeIndex(g)) <= gameState.getGhostEdibleTime(g)
+						- (Constants.EAT_DISTANCE)) {
 					blue[k] = gameState.getGhostCurrentNodeIndex(g);
 					k++;
 				}
@@ -250,7 +243,8 @@ public class PacManMover {
 		if (k > 0) {
 			int[] targets = new int[k];
 			System.arraycopy(blue, 0, targets, 0, k);
-			return gameState.getClosestNodeIndexFromNodeIndex(gameState.getPacmanCurrentNodeIndex(), targets, DM.PATH);
+			return gameState.getClosestNodeIndexFromNodeIndex(
+					gameState.getPacmanCurrentNodeIndex(), targets, DM.PATH);
 		} else {
 			return -1;
 		}
@@ -318,7 +312,8 @@ public class PacManMover {
 					return safeMoves2[j];
 				}
 				// Don't visit an edge twice unless it is unavoidable
-				if (dGame.getPacmanEdgeVisited(junction[safeMoves2[j].ordinal()].uniqueId) || safeMoves2[j] == reverse) {
+				if (dGame.getPacmanEdgeVisited(junction[safeMoves2[j].ordinal()].uniqueId)
+						|| safeMoves2[j] == reverse) {
 					continue;
 				}
 
@@ -355,7 +350,8 @@ public class PacManMover {
 				// System.out.println("[3] Selected " + nextDir + " T: " + gameState.getCurrentLevelTime() + " L: "
 				// + gameState.getPacmanCurrentNodeIndex());
 			} else {
-				pacMoves = gameState.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade());
+				pacMoves = gameState.getPossibleMoves(pacLocation,
+						gameState.getPacmanLastMoveMade());
 				nextDir = pacMoves[XSRandom.r.nextInt(pacMoves.length)];
 				lastJSafety = 13;
 				// System.out.println("[4] Random " + nextDir + " T: " + gameState.getCurrentLevelTime() + " L: "
@@ -372,7 +368,8 @@ public class PacManMover {
 						// This contains both forward and backward directions
 						directionsRev = gameState.getPossibleMoves(pacLocation);
 						// This is always the forward direction
-						MOVE forward = gameState.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0];
+						MOVE forward = gameState.getPossibleMoves(pacLocation,
+								gameState.getPacmanLastMoveMade())[0];
 						MOVE reverse = MOVE.NEUTRAL;
 
 						for (int i = directionsRev.length - 1; i >= 0; i--) {
@@ -383,18 +380,6 @@ public class PacManMover {
 						}
 						reversedOnPath = true; // Reverse only once
 						dGame.reversePacMan();
-						// System.out.println("Angry ghost near, reversed! " + gameState.getCurrentLevelTime());
-						// if (lastJSafety < 10) {
-						// System.out.println("Angry ghost near, reversed! " + gameState.getCurrentLevelTime() + " "
-						// + lastJSafety);
-						// }
-						// if (debugGameState != null) {
-						// new GameView(debugGameState).showGame();
-						// new GameView(gameState).showGame();
-						// PacManMover pm = new PacManMover(debugGameState, debugDGameState);
-						// pm.generatePacManMove(selectionType);
-						// }
-						// }
 						safety = 7;
 						return reverse;
 					}
@@ -407,8 +392,10 @@ public class PacManMover {
 						blues[g.ordinal()] = gameState.getGhostCurrentNodeIndex(g);
 					}
 
-					MOVE move = gameState.getNextMoveTowardsTarget(pacLocation,
-							gameState.getClosestNodeIndexFromNodeIndex(pacLocation, blues, DM.PATH), DM.PATH);
+					MOVE move = gameState
+							.getNextMoveTowardsTarget(pacLocation, gameState
+									.getClosestNodeIndexFromNodeIndex(pacLocation, blues, DM.PATH),
+									DM.PATH);
 					if (move == gameState.getPacmanLastMoveMade().opposite()
 							|| move.opposite() == gameState.getPacmanLastMoveMade()) {
 						dGame.reversePacMan();
@@ -432,8 +419,10 @@ public class PacManMover {
 				for (int i = 0; i < powerPills.length; i++) {
 					curDist = gameState.getShortestPathDistance(pacLoc, powerPills[i]);
 					if (curDist <= (Constants.EAT_DISTANCE + 1)) {
-						nextLoc = gameState.getNeighbour(pacLoc,
-								gameState.getPossibleMoves(pacLoc, gameState.getPacmanLastMoveMade())[0]);
+						nextLoc = gameState.getNeighbour(
+								pacLoc,
+								gameState.getPossibleMoves(pacLoc,
+										gameState.getPacmanLastMoveMade())[0]);
 						nextDist = gameState.getShortestPathDistance(nextLoc, powerPills[i]);
 						if (nextDist < curDist) {
 							return true;

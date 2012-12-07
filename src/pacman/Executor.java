@@ -3,6 +3,7 @@ package pacman;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -12,6 +13,7 @@ import java.util.Random;
 import pacman.controllers.*;
 import pacman.controllers.examples.Legacy2TheReckoning;
 import pacman.entries.pacman.MyPacMan;
+import pacman.entries.pacman.unimaas.framework.XSRandom;
 import pacman.game.Constants;
 import pacman.game.Game;
 import pacman.game.GameView;
@@ -29,100 +31,133 @@ public class Executor {
 	/**
 	 * The main method. Several options are listed - simply remove comments to use the option you want.
 	 * 
-	 * @param args the command line arguments
+	 * @param args
+	 *            the command line arguments
 	 */
 	public static void main(String[] args) {
 		Executor exec = new Executor();
-
-		/*
-		 * //run multiple games in batch mode - good for testing. int numTrials=10; 
-		 * exec.runExperiment(new RandomPacMan(),new RandomGhosts(),numTrials);
-		 */
-
-		/*
-		 * //run a game in synchronous mode: game waits until controllers respond. int delay=5; boolean visual=true;
-		 * exec.runGame(new RandomPacMan(),new RandomGhosts(),visual,delay);
-		 */
-
-		// /*
-		// run the game in asynchronous mode.
-		boolean visual = true;
-		// exec.runGameTimed(new NearestPillPacMan(),new
-		// AggressiveGhosts(),visual);
-		exec.runGame(new MyPacMan(), new Legacy2TheReckoning(), visual, Constants.DELAY);
-		// exec.runGameTimedSpeedOptimised(new MyPacMan(), new
-		// Legacy2TheReckoning(), false, true);
-		// exec.runGameTimedSpeedOptimised(new StarterPacMan(), new
-		// PinchGhostMover(), false, true);
-		// exec.runGame(new StarterPacMan(), new MyGhosts(), visual,
-		// Constants.DELAY);
-		// exec.runGameTimed(new HumanController(new KeyBoardInput()),new
-		// StarterGhosts(),visual);
-		// */
-
-		/*
-		 * //run the game in asynchronous mode but advance as soon as both controllers are ready - this is the mode of
-		 * the competition. //time limit of DELAY ms still applies. boolean visual=true; boolean fixedTime=false;
-		 * exec.runGameTimedSpeedOptimised(new RandomPacMan(),new RandomGhosts(),fixedTime,visual);
-		 */
-
-		/*
-		 * //run game in asynchronous mode and record it to file for replay at a later stage. boolean visual=true;
-		 * String fileName="replay.txt"; exec.runGameTimedRecorded(new HumanController(new KeyBoardInput()),new
-		 * RandomGhosts(),visual,fileName); //exec.replayGame(fileName,visual);
-		 */
+		//
+		if (args.length == 0) {
+			exec.runGame(new MyPacMan(), new Legacy2TheReckoning(), true, Constants.DELAY);
+			return;
+		} else if (args[0].equals("?")) {
+			System.out.println("Usage: \n java -jar MsPacMan.jar <output file> <numTrials> <test>");
+			return;
+		}
+		//
+		int numTrials = Integer.parseInt(args[1]);
+		//
+		outFile = args[0];
+		try {
+			logFile = new FileWriter(outFile, true);
+			out = new PrintWriter(outFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+		//
+		Controller<EnumMap<GHOST, MOVE>> ghosts = new Legacy2TheReckoning();
+		MyPacMan pacman = new MyPacMan();
+		//
+		if (args[2].equals("alpha")) {
+			writeOutput("alpha");
+			for (double u = .0; u <= 1.; u += .1) {
+				writeOutput(":: Alpha: " + u);
+				pacman.setAlpha(u);
+				exec.runExperiment(pacman, ghosts, numTrials);
+			}
+		}
+		//
+		if (args[2].equals("uct")) {
+			writeOutput("UCT Constant");
+			for (double u = .1; u <= 2.; u += .2) {
+				writeOutput(":: UCT Constant: " + u);
+				pacman.setUCTC(u);
+				exec.runExperiment(pacman, ghosts, numTrials);
+			}
+		}
+		//
+		if (args[2].equals("gamma")) {
+			writeOutput("gamma");
+			for (double u = .0; u <= 1.; u += .1) {
+				writeOutput(":: Decay factor gamma: " + u);
+				pacman.setGamma(u);
+				exec.runExperiment(pacman, ghosts, numTrials);
+			}
+		}
 	}
 
-	/**
-	 * For running multiple games without visuals. This is useful to get a good idea of how well a controller plays
-	 * against a chosen opponent: the random nature of the game means that performance can vary from game to game.
-	 * Running many games and looking at the average score (and standard deviation/error) helps to get a better idea of
-	 * how well the controller is likely to do in the competition.
-	 * 
-	 * @param pacManController
-	 *            The Pac-Man controller
-	 * @param ghostController
-	 *            The Ghosts controller
-	 * @param trials
-	 *            The number of trials to be executed
-	 */
+	private static String outFile;
+	private static PrintWriter out;
+	private static FileWriter logFile;
+
+	private static void writeOutput(String output) {
+		if (out != null) { // Write output to file
+			out.println(output);
+			out.flush();
+		}
+		// Also write it to default output in case writing to file fails.
+		System.out.println(output);
+	}
+
 	public void runExperiment(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, int trials) {
-		double avgScore = 0;
-
+		double avgScore = 0, maxScore = 0, minScore = Double.POSITIVE_INFINITY, S;
+		int[] values = new int[trials];
+		long due;
 		Random rnd = new Random(0);
+		XSRandom.r.setSeed(0);
 		Game game;
-
-		for (int i = 0; i < trials; i++) {
+		//
+		int i = 0, realTrials = 0, avgLives = 0, avgMaze = 0;
+		writeOutput(":: Running " + trials + " games");
+		writeOutput("Score \t Lives \t Final level");
+		//
+		for (i = 0; i < trials; i++) {
 			game = new Game(rnd.nextLong());
-
-			while (!game.gameOver()) {
-				game.advanceGame(
-						pacManController.getMove(game.copy(), System.currentTimeMillis() + DELAY),
-						ghostController.getMove(game.copy(), System.currentTimeMillis() + DELAY));
+			//
+			try {
+				while (!game.gameOver()) {
+					game.advanceGame(pacManController.getMove(game.copy(),
+							System.currentTimeMillis() + DELAY), ghostController.getMove(
+							game.copy(), System.currentTimeMillis() + DELAY));
+				}
+			} catch (Exception ex) {
+				System.err.println("Exception caught, running next game. " + ex.getMessage());
 			}
 
-			avgScore += game.getScore();
-			System.out.println(i + "\t" + game.getScore());
-		}
+			writeOutput(game.getScore() + "\t" + game.getPacmanNumberOfLivesRemaining() + "\t"
+					+ game.getCurrentLevel());
 
-		System.out.println(avgScore / trials);
+			if (game.getScore() < minScore) {
+				minScore = game.getScore();
+			}
+			if (game.getScore() > maxScore) {
+				maxScore = game.getScore();
+			}
+			values[realTrials] = game.getScore();
+			//
+			avgScore += game.getScore();
+			avgLives += game.getPacmanNumberOfLivesRemaining();
+			avgMaze += game.getCurrentLevel();
+			realTrials++;
+		}
+		//
+		double stdSum = 0., mean = avgScore / (double) realTrials;
+		for (i = 0; i < realTrials; i++) {
+			stdSum += Math.pow(values[i] - mean, 2);
+		}
+		//
+		writeOutput(":: Ran " + realTrials + " trials");
+		writeOutput(":: Average score: " + mean);
+		writeOutput(":: Average maze reached: " + ((double) avgMaze / (double) realTrials));
+		writeOutput(":: Agerage lives remaining: " + ((double) avgLives / (double) realTrials));
+		writeOutput(":: Maximum score: " + maxScore);
+		writeOutput(":: Minimum score: " + minScore);
+		writeOutput(":: Std dev: " + Math.sqrt(stdSum / (double) realTrials));
+		writeOutput("-------------------========-----------------------");
 	}
 
-	/**
-	 * Run a game in asynchronous mode: the game waits until a move is returned. In order to slow thing down in case the
-	 * controllers return very quickly, a time limit can be used. If fasted gameplay is required, this delay should be
-	 * put as 0.
-	 * 
-	 * @param pacManController
-	 *            The Pac-Man controller
-	 * @param ghostController
-	 *            The Ghosts controller
-	 * @param visual
-	 *            Indicates whether or not to use visuals
-	 * @param delay
-	 *            The delay between time-steps
-	 */
 	public void runGame(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual, int delay) {
 		Game game = new Game(0), debugGame = new Game(0);
@@ -149,17 +184,6 @@ public class Executor {
 		System.out.println("Game over!");
 	}
 
-	/**
-	 * Run the game with time limit (asynchronous mode). This is how it will be done in the competition. Can be played
-	 * with and without visual display of game states.
-	 * 
-	 * @param pacManController
-	 *            The Pac-Man controller
-	 * @param ghostController
-	 *            The Ghosts controller
-	 * @param visual
-	 *            Indicates whether or not to use visuals
-	 */
 	public void runGameTimed(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual) {
 		Game game = new Game(0);
@@ -195,19 +219,6 @@ public class Executor {
 		ghostController.terminate();
 	}
 
-	/**
-	 * Run the game in asynchronous mode but proceed as soon as both controllers replied. The time limit still applies
-	 * so so the game will proceed after 40ms regardless of whether the controllers managed to calculate a turn.
-	 * 
-	 * @param pacManController
-	 *            The Pac-Man controller
-	 * @param ghostController
-	 *            The Ghosts controller
-	 * @param fixedTime
-	 *            Whether or not to wait until 40ms are up even if both controllers already responded
-	 * @param visual
-	 *            Indicates whether or not to use visuals
-	 */
 	public void runGameTimedSpeedOptimised(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean fixedTime, boolean visual) {
 		Game game = new Game(0);

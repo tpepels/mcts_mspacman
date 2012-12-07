@@ -81,7 +81,8 @@ public class DiscreteGame {
 					}
 
 					if (n != -1) {
-						if (jn[i][j.ordinal()] == null && jn[n][lastDir.opposite().ordinal()] == null) {
+						if (jn[i][j.ordinal()] == null
+								&& jn[n][lastDir.opposite().ordinal()] == null) {
 							int[] nodes = new int[] { i, n };
 							Edge edge = new Edge(id, nodes, length, pills, pp);
 
@@ -124,7 +125,8 @@ public class DiscreteGame {
 	// The highest edge-id for the current maze
 	private static int[] highestEdgeId;
 	//
-	private int pacHeading = -1, pacRear = -1, currentMaze = -1, lastPacManJunction = -1, visitedEdgeCount = 0;
+	private int pacHeading = -1, pacRear = -1, currentMaze = -1, lastPacManJunction = -1,
+			visitedEdgeCount = 0;
 	private Edge currentPacManEdge;
 	private MOVE lastPacManMove;
 	private boolean[] pacmanEdgesVisited;
@@ -158,7 +160,8 @@ public class DiscreteGame {
 	/**
 	 * Creates a discrete game state for the current game state
 	 * 
-	 * @param gameState The current game state
+	 * @param gameState
+	 *            The current game state
 	 */
 	public DiscreteGame(Game gameState) {
 		setCurrentMaze(gameState);
@@ -378,22 +381,15 @@ public class DiscreteGame {
 		// Set the edge to visited
 		try {
 			Edge edge = getGraph()[junction][move.ordinal()];
-			// if (edge == null) {
-			// System.out.println("hier!" + junction + " " + move);
-			//
-			// } else {
 			currentPacManEdge = edge;
 			pacHeading = edge.nodes[1];
-
+			//
 			if (pacHeading == junction)
 				pacHeading = edge.nodes[0];
-			// }
-			// this.pacmanEdgesVisited[edge.uniqueId] = true;
-			// Set the locations of the front and rear of pacman
+			//
 			pacRear = junction;
 		} catch (Exception ex) {
-			//System.err.println("Pacmove nullpointer");
-			throw ex;
+			System.err.println("Pacmove nullpointer");
 		}
 	}
 
@@ -412,7 +408,6 @@ public class DiscreteGame {
 	 */
 	public void reversePacMan() {
 		int temp = pacHeading;
-
 		pacHeading = pacRear;
 		pacRear = temp;
 		pacManReversed = true;
@@ -437,8 +432,8 @@ public class DiscreteGame {
 			pillsEatenEdge = new int[highestEdgeId[currentMaze]];
 			ghostJunctions = new int[] { -1, -1, -1, -1 };
 			ghostMoves = new MOVE[Constants.NUM_GHOSTS];
-			ghostEdges = new int[] { initialEdges[newMaze], initialEdges[newMaze], initialEdges[newMaze],
-					initialEdges[newMaze] };
+			ghostEdges = new int[] { initialEdges[newMaze], initialEdges[newMaze],
+					initialEdges[newMaze], initialEdges[newMaze] };
 			ghostHeadings = new int[] { -1, -1, -1, -1 };
 			//
 			timeOnCurrentEdge = 0;
@@ -478,7 +473,8 @@ public class DiscreteGame {
 	}
 
 	public void setGhostMove(int ghost, int junction, MOVE move) {
-
+		if (move == MOVE.NEUTRAL)
+			return;
 		ghostMoves[ghost] = move;
 		ghostJunctions[ghost] = junction;
 		//
@@ -491,7 +487,8 @@ public class DiscreteGame {
 				ghostHeadings[ghost] = edge.nodes[0];
 			}
 		} catch (Exception ex) {
-			System.err.println("GhostMove nullpointer");
+			System.err.println(String.format("GhostMove nullpointer, j: %d, m: %d, g: %d",
+					junction, move.ordinal(), ghost));
 		}
 	}
 

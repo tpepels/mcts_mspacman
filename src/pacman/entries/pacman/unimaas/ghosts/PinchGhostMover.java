@@ -33,7 +33,7 @@ public class PinchGhostMover {
 	//
 	private MOVE[] dirs;
 	private MOVE lastMove;
-	private int pacLoc, pacRear, pacFront, pacDistance, pacFrontDist, pacRearDist;
+	private int pacLoc, pacRear, pacFront, pacDistance, pacFrontDist;
 
 	int pacEdge, ghostJ, ghostEdge, ghostHeading, moveO;
 
@@ -83,10 +83,7 @@ public class PinchGhostMover {
 					dirs = gameState.getPossibleMoves(current, gameState.getGhostLastMoveMade(g));
 					MOVE move = dirs[XSRandom.r.nextInt(dirs.length)];
 					ghostMoves.put(g, move);
-					// Store the decision in the discrete gamestate.
-					if (gameState.isJunction(current)) {
-						dGame.setGhostMove(g.ordinal(), current, move);
-					}
+
 				}
 			}
 			// Return the random moves.
@@ -95,15 +92,15 @@ public class PinchGhostMover {
 		//
 		if (dGame.getCurrentPacmanEdge() != null) {
 			if (dGame.isPacmanReversed()) {
-				pacRearDist = dGame.pacManDistanceToHeading() + 1;
+				//pacRearDist = dGame.pacManDistanceToHeading() + 1;
 				pacFrontDist = dGame.pacManDistanceToRear() + 1;
 			} else {
 				pacFrontDist = dGame.pacManDistanceToHeading() + 1;
-				pacRearDist = dGame.pacManDistanceToRear() + 1;
+				//pacRearDist = dGame.pacManDistanceToRear() + 1;
 			}
 		} else {
 			pacFrontDist = 0;
-			pacRearDist = 0;
+			//pacRearDist = 0;
 		}
 		//
 		for (GHOST g : GHOST.values()) {
@@ -112,7 +109,8 @@ public class PinchGhostMover {
 			dirs = gameState.getPossibleMoves(current, lastMove);
 			if (dirs.length > 1) {
 				//
-				pacDistance = gameState.getShortestPathDistance(current, pacLoc, lastMove) - Constants.EAT_DISTANCE;
+				pacDistance = gameState.getShortestPathDistance(current, pacLoc, lastMove)
+						- Constants.EAT_DISTANCE;
 				boolean pacClose = false;
 				MOVE move = MOVE.NEUTRAL;
 
@@ -131,7 +129,8 @@ public class PinchGhostMover {
 					}
 					//
 					if (pacDistance <= pacDistT && !pacClose) {
-						move = gameState.getApproximateNextMoveTowardsTarget(current, pacLoc, lastMove, DM.PATH);
+						move = gameState.getApproximateNextMoveTowardsTarget(current, pacLoc,
+								lastMove, DM.PATH);
 						// System.out.println(g + " " + move + " PAC CLOSE");
 						if (!isDoubleMove(g, move)) {
 							pacClose = true;
@@ -143,7 +142,8 @@ public class PinchGhostMover {
 				if (!pacClose && XSRandom.r.nextDouble() < greedyP) {
 					if (gameState.isGhostEdible(g)) {
 						// Edible == run away!.
-						move = gameState.getApproximateNextMoveAwayFromTarget(current, pacLoc, lastMove, DM.PATH);
+						move = gameState.getApproximateNextMoveAwayFromTarget(current, pacLoc,
+								lastMove, DM.PATH);
 						move = this.getNonDoubleMove(g, move);
 						// System.out.println(g + " " + move + " EDIBLE");
 					} else {
@@ -153,7 +153,8 @@ public class PinchGhostMover {
 							//
 							if (current == pacRear && gameState.isJunction(current)) {
 								for (int j = 0; j < dirs.length; j++) {
-									if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j].ordinal()].uniqueId) {
+									if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j]
+											.ordinal()].uniqueId) {
 										// System.out.println(g + " " + dirs[j] + " AT PAC REAR");
 										move = dirs[j];
 										if (!isDoubleMove(g, move)) {
@@ -166,27 +167,16 @@ public class PinchGhostMover {
 							//
 							if (!pacClose) {
 								// Get closer to the rear position of pacman
-								// if (gameState.getShortestPathDistance(current, pacRear, lastMove)
-								// - Constants.EAT_DISTANCE <= pacRearDist) {
-								move = gameState.getApproximateNextMoveTowardsTarget(current, pacRear, lastMove,
-										DM.PATH);
-								// System.out.println(g + " " + move + " CLOSE TO REAR");
-								// } else {
-								// move = gameState.getApproximateNextMoveTowardsTarget(
-								// current,
-								// gameState.getClosestNodeIndexFromNodeIndex(current,
-								// getNextNodes(pacRear, dGame.getCurrentPacmanEdgeId()), DM.PATH),
-								// lastMove, DM.PATH);
-								// move = this.getNonDoubleMove(g, move);
-								// System.out.println(g + " " + move + " TO REAR SOMEWHERE");
-								// }
+								move = gameState.getApproximateNextMoveTowardsTarget(current,
+										pacRear, lastMove, DM.PATH);
 							}
 						} else {
 							if (gameState.isJunction(current)) {
 								// //
 								if (current == pacFront) {
 									for (int j = 0; j < dirs.length; j++) {
-										if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j].ordinal()].uniqueId) {
+										if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j]
+												.ordinal()].uniqueId) {
 											// System.out.println(g + " " + dirs[j] + " AT PAC FRONT");
 
 											move = dirs[j];
@@ -217,21 +207,14 @@ public class PinchGhostMover {
 								// Get closer to the front of pacman
 								if (gameState.getShortestPathDistance(current, pacFront, lastMove)
 										- Constants.EAT_DISTANCE <= pacFrontDist) {
-									move = gameState.getApproximateNextMoveTowardsTarget(current, pacFront, lastMove,
-											DM.PATH);
+									//
+									move = gameState.getApproximateNextMoveTowardsTarget(current,
+											pacFront, lastMove, DM.PATH);
 									// System.out.println(g + " " + move + " CLOSE TO FRONT");
 								} else {
-									// move = gameState.getApproximateNextMoveTowardsTarget(
-									// current,
-									// gameState.getClosestNodeIndexFromNodeIndex(current,
-									// getNextNodes(pacFront, dGame.getCurrentPacmanEdgeId()), DM.PATH),
-									// lastMove, DM.PATH);
-
-									// move = gameState.getApproximateNextMoveTowardsTarget(current,
-									// getRandomNextNode(pacFront, dGame.getCurrentPacmanEdgeId()), lastMove,
-									// DM.PATH);
-									move = gameState.getApproximateNextMoveTowardsTarget(current, pacFront, lastMove,
-											DM.PATH);
+									move = gameState.getApproximateNextMoveTowardsTarget(current,
+											pacFront, lastMove, DM.PATH);
+									//
 									if (isDoubleMove(g, move)) {
 										move = getRandomMoveToTarget(g, pacFront);
 									}
@@ -248,24 +231,12 @@ public class PinchGhostMover {
 						move = getRandomMoveToTarget(g, pacFront);
 					}
 					move = getNonDoubleMove(g, move);
-					// System.out.println(g + " " + move + " RANDOM");
 				}
 				//
 				ghostMoves.put(g, move);
-				// Store the moves of the ghosts in the discrete game state
-				if (gameState.isJunction(current)) {
-					dGame.setGhostMove(g.ordinal(), current, move);
-				}
 			}
 		}
-		// if (dGame.getCurrentPacmanEdge() != null) {
-		// GameView.addPoints(gameState, Color.yellow, getNextNodes(pacFront, dGame.getCurrentPacmanEdgeId()));
-		// GameView.addPoints(gameState, Color.red, getNextNodes(pacRear, dGame.getCurrentPacmanEdgeId()));
-		// }
 		//
-		// if (debug) {
-		// System.out.println("Hier!");
-		// }
 		return ghostMoves;
 	}
 
@@ -283,7 +254,7 @@ public class PinchGhostMover {
 		//
 		return false;
 	}
-	
+
 	private MOVE getNonDoubleMove(GHOST g, MOVE move) {
 		//
 		for (GHOST f : GHOST.values()) {
@@ -310,10 +281,12 @@ public class PinchGhostMover {
 		MOVE forbiddenMove = MOVE.NEUTRAL;
 		if (edible) {
 
-			forbiddenMove = gameState.getApproximateNextMoveTowardsTarget(current, location, lastMove, DM.PATH);
+			forbiddenMove = gameState.getApproximateNextMoveTowardsTarget(current, location,
+					lastMove, DM.PATH);
 		} else {
 
-			forbiddenMove = gameState.getApproximateNextMoveAwayFromTarget(current, location, lastMove, DM.PATH);
+			forbiddenMove = gameState.getApproximateNextMoveAwayFromTarget(current, location,
+					lastMove, DM.PATH);
 		}
 		MOVE move = dirs[XSRandom.r.nextInt(dirs.length)];
 		while (move.equals(forbiddenMove)) {

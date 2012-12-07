@@ -7,7 +7,6 @@ import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
 /**
- * 
  * @author Tom Pepels, Maastricht University
  */
 public abstract class MCTNode {
@@ -17,7 +16,6 @@ public abstract class MCTNode {
 	// Move information
 	public MOVE pathDirection;
 	public Edge edge;
-	//
 	public int depth = 0, pathLength, junctionIndex;
 	// Scores [pill, ghost, survival]
 	public double[] meanScores, maxScores, currentScores, maxCurrentScores;
@@ -108,6 +106,7 @@ public abstract class MCTNode {
 		meanScores[0] *= discount;
 		meanScores[1] *= discount;
 		meanScores[2] *= discount;
+		//
 		totalVisitCount *= discount;
 		// Reset the maximum scores, they should be reset later.
 		maxScores = new double[3];
@@ -147,13 +146,16 @@ public abstract class MCTNode {
 	}
 
 	/**
-	 * Adds a visit to the visitcounter
+	 * Adds a visit to the visit counter
 	 */
 	public void addVisit() {
 		// This is the number of visits for the current turn.
 		currentVisitCount++;
 		totalVisitCount++;
 	}
+
+	// The children of a node should represent at least this part of the node's visits.
+	private double minChildVisitRate = .6;
 
 	public void backPropagate(MCTResult result, SelectionType selectionType, int treePhaseDepth) {
 		MCTNode node = this;
@@ -168,42 +170,39 @@ public abstract class MCTNode {
 		while (node != null) {
 			// Update the node's values (Average Back-propagation)
 			if (node.depth > treePhaseDepth) {
-				node.totalVisitCount--;
 				node.currentVisitCount--;
+				node.totalVisitCount--;
 				node = node.getParent();
 				continue;
 			}
 			node.addValue(result);
-
-			// Maximum back-propagate the values of the child with the highest
-			// score
+			// Maximum back-propagate the values of the child with the highest score
 			MCTNode topChild = null;
 			double topRate = Double.NEGATIVE_INFINITY;
 			double childrenVCount = 0.;
 			for (MCTNode child : node.getChildren()) {
 				childrenVCount += child.getVisitCount();
 				//
-				if (selectionType == SelectionType.TargetRate) {
-					if (child.getMaxSurvivalRate() > topRate) {
+				if (selectionType == SelectionType.SurvivalRate) {
+					if (child.getAlphaSurvivalScore() > topRate) {
 						topChild = child;
-						topRate = topChild.getMaxSurvivalRate();
+						topRate = topChild.getAlphaSurvivalScore();
 					}
 				} else if (selectionType == SelectionType.PillScore) {
-					if (child.getMaxPillScore() * child.getMaxSurvivalRate() > topRate) {
+					if (child.getAlphaPillScore() > topRate) {
 						topChild = child;
-						topRate = child.getMaxPillScore() * child.getMaxSurvivalRate();
+						topRate = child.getAlphaPillScore();
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
-					if (child.getMaxGhostScore() * child.getMaxSurvivalRate() > topRate) {
+					if (child.getAlphaGhostScore() > topRate) {
 						topChild = child;
-						topRate = child.getMaxGhostScore() * child.getMaxSurvivalRate();
+						topRate = child.getAlphaGhostScore();
 					}
 				}
 			}
-
 			// The children didn't have enough visits compared to this node,
-			// therefore don't use their values to backpropagate
-			if (childrenVCount / getVisitCount() < minChildVisitRate) {
+			// therefore don't use their values to back-propagate
+			if ((childrenVCount / getVisitCount()) < minChildVisitRate) {
 				node.maxScores = node.meanScores;
 				node.maxCurrentScores = node.currentScores;
 				//
@@ -223,6 +222,139 @@ public abstract class MCTNode {
 		}
 	}
 
+	public void propagateMaxValues(SelectionType selectionType) {
+		if (!isLeaf()) {
+			double childrenVCount = 0.;
+			//
+			for (MCTNode c : children) {
+				childrenVCount += c.getVisitCount();
+				if (c.isLeaf()) {
+					continue;
+				}
+				c.propagateMaxValues(selectionType);
+			}
+			// The children didn't have enough visits compared to this node.
+			if (childrenVCount / getVisitCount() < minChildVisitRate) {
+				maxScores = meanScores;
+				maxCurrentScores = currentScores;
+				//
+				maxTotalVisitCount = totalVisitCount;
+				maxCurrentVisitCount = currentVisitCount;
+				return;
+			}
+			//
+			MCTNode topChild = null;
+			double topRate = Double.NEGATIVE_INFINITY;
+			//
+			for (MCTNode child : children) {
+				// Do not use values of unvisited children
+				if (child.currentVisitCount < UCTSelection.minVisits) {
+					continue;
+				}
+				if (selectionType == SelectionType.SurvivalRate) {
+					if (child.getAlphaSurvivalScore() > topRate) {
+						topChild = child;
+						topRate = topChild.getAlphaSurvivalScore();
+					}
+				} else if (selectionType == SelectionType.PillScore) {
+					if (child.getAlphaPillScore() > topRate) {
+						topChild = child;
+						topRate = child.getAlphaPillScore();
+					}
+				} else if (selectionType == SelectionType.GhostScore) {
+					if (child.getAlphaGhostScore() > topRate) {
+						topChild = child;
+						topRate = child.getAlphaGhostScore();
+					}
+				}
+			}
+			if (topChild == null) {
+				maxScores = meanScores;
+				maxCurrentScores = currentScores;
+				//
+				maxTotalVisitCount = totalVisitCount;
+				maxCurrentVisitCount = currentVisitCount;
+				return;
+			}
+			//
+			maxScores = topChild.maxScores;
+			maxCurrentScores = topChild.maxCurrentScores;
+			//
+			maxTotalVisitCount = topChild.maxTotalVisitCount;
+			maxCurrentVisitCount = topChild.maxCurrentVisitCount;
+		}
+	}
+
+	public void propagateMaxValues(SelectionType selectionType, double minRate) {
+		if (!isLeaf()) {
+			//
+			double childrenVCount = 0.;
+			for (MCTNode c : children) {
+				childrenVCount += c.getVisitCount();
+				if (c.isLeaf()) {
+					continue;
+				}
+				c.propagateMaxValues(selectionType, minRate);
+			}
+			// The children didn't have enough visits compared to this node.
+			if (childrenVCount / getVisitCount() < minChildVisitRate) {
+				maxScores = meanScores;
+				maxCurrentScores = currentScores;
+				//
+				maxTotalVisitCount = totalVisitCount;
+				maxCurrentVisitCount = currentVisitCount;
+				return;
+			}
+			//
+			MCTNode topChild = null;
+			double topRate = Double.NEGATIVE_INFINITY;
+			//
+			for (MCTNode child : children) {
+				// Do not use values of unvisited children
+				if (child.currentVisitCount < UCTSelection.minVisits
+						|| child.getMaxSurvivalRate() < minRate) {
+					continue;
+				}
+				if (selectionType == SelectionType.SurvivalRate) {
+					if (child.getAlphaSurvivalScore() > topRate) {
+						topChild = child;
+						topRate = topChild.getAlphaSurvivalScore();
+					}
+				} else if (selectionType == SelectionType.PillScore) {
+					if (child.getAlphaPillScore() > topRate) {
+						topChild = child;
+						topRate = child.getAlphaPillScore();
+					}
+				} else if (selectionType == SelectionType.GhostScore) {
+					if (child.getAlphaGhostScore() > topRate) {
+						topChild = child;
+						topRate = child.getAlphaGhostScore();
+					}
+				}
+			}
+			//
+			if (topChild == null) {
+				maxScores = meanScores;
+				maxCurrentScores = currentScores;
+				//
+				maxTotalVisitCount = totalVisitCount;
+				maxCurrentVisitCount = currentVisitCount;
+				return;
+			}
+			//
+			maxScores = topChild.maxScores;
+			maxCurrentScores = topChild.maxCurrentScores;
+			//
+			maxTotalVisitCount = topChild.maxTotalVisitCount;
+			maxCurrentVisitCount = topChild.maxCurrentVisitCount;
+		}
+	}
+
+	/**
+	 * Check based on some simple rules to determine if this node should be expanded
+	 * @param maxPathLength The maximum path-length for paths in the tree
+	 * @return true if this node can be expanded, false otherwise
+	 */
 	public boolean canExpand(int maxPathLength) {
 		if (!isRoot()) {
 			if (getPathLength() <= maxPathLength) {
@@ -239,7 +371,7 @@ public abstract class MCTNode {
 
 	/**
 	 * The implementation of this method should do the following: 1. Initialize the children array with size equal to
-	 * the number of possible childnodes (if not initialized)
+	 * the number of possible child nodes (if not initialized)
 	 * 
 	 * @return The position of the first expanded child
 	 */
@@ -322,7 +454,7 @@ public abstract class MCTNode {
 	public double getVisitCount() {
 		return totalVisitCount;
 	}
-	
+
 	public double getCurrentVisitCount() {
 		return currentVisitCount;
 	}
@@ -344,138 +476,6 @@ public abstract class MCTNode {
 	 */
 	public boolean isRoot() {
 		return parent == null;
-	}
-
-	// The children of a node should represent at least this part of the node's visits.
-	double minChildVisitRate = .6;
-
-	public void propagateMaxValues(SelectionType selectionType) {
-		if (!isLeaf()) {
-			double childrenVCount = 0.;
-			//
-			for (MCTNode c : children) {
-				childrenVCount += c.getVisitCount();
-				if (c.isLeaf()) {
-					continue;
-				}
-				c.propagateMaxValues(selectionType);
-			}
-			// The children didn't have enough visits compared to this node.
-			if (childrenVCount / getVisitCount() < minChildVisitRate) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
-				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
-				return;
-			}
-
-			//
-			MCTNode topChild = null;
-			double topScore = Double.NEGATIVE_INFINITY;
-			//
-			for (MCTNode child : children) {
-				// Do not use values of unvisited children
-				if (child.currentVisitCount < UCTSelection.minVisits) {
-					continue;
-				}
-				if (selectionType == SelectionType.TargetRate) {
-					if (child.getMaxSurvivalRate() > topScore) {
-						topChild = child;
-						topScore = topChild.getMaxSurvivalRate();
-					}
-				} else if (selectionType == SelectionType.PillScore) {
-					if (child.getMaxPillScore() * child.getMaxSurvivalRate() > topScore) {
-						topChild = child;
-						topScore = child.getMaxPillScore() * child.getMaxSurvivalRate();
-					}
-				} else if (selectionType == SelectionType.GhostScore) {
-					if (child.getMaxGhostScore() * child.getMaxSurvivalRate() > topScore) {
-						topChild = child;
-						topScore = child.getMaxGhostScore() * child.getMaxSurvivalRate();
-					}
-				}
-			}
-			if (topChild == null) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
-				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
-				return;
-			}
-			//
-			//
-			maxScores = topChild.maxScores;
-			maxCurrentScores = topChild.maxCurrentScores;
-			//
-			maxTotalVisitCount = topChild.maxTotalVisitCount;
-			maxCurrentVisitCount = topChild.maxCurrentVisitCount;
-		}
-	}
-
-	public void propagateMaxValues(SelectionType selectionType, double minRate) {
-		if (!isLeaf()) {
-			//
-			double childrenVCount = 0.;
-			for (MCTNode c : children) {
-				childrenVCount += c.getVisitCount();
-				if (c.isLeaf()) {
-					continue;
-				}
-				c.propagateMaxValues(selectionType, minRate);
-			}
-			// The children didn't have enough visits compared to this node.
-			if (childrenVCount / getVisitCount() < minChildVisitRate) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
-				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
-				return;
-			}
-			//
-			MCTNode topChild = null;
-			double topScore = Double.NEGATIVE_INFINITY;
-			//
-			for (MCTNode child : children) {
-				// Do not use values of unvisited children
-				if (child.currentVisitCount < UCTSelection.minVisits
-						|| child.getMaxSurvivalRate() < minRate) {
-					continue;
-				}
-				if (selectionType == SelectionType.TargetRate) {
-					if (child.getMaxSurvivalRate() > topScore) {
-						topChild = child;
-						topScore = topChild.getMaxSurvivalRate();
-					}
-				} else if (selectionType == SelectionType.PillScore) {
-					if (child.getMaxPillScore() * child.getMaxSurvivalRate() > topScore) {
-						topChild = child;
-						topScore = child.getMaxPillScore() * child.getMaxSurvivalRate();
-					}
-				} else if (selectionType == SelectionType.GhostScore) {
-					if (child.getMaxGhostScore() * child.getMaxSurvivalRate() > topScore) {
-						topChild = child;
-						topScore = child.getMaxGhostScore() * child.getMaxSurvivalRate();
-					}
-				}
-			}
-			if (topChild == null) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
-				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
-				return;
-			}
-			//
-			maxScores = topChild.maxScores;
-			maxCurrentScores = topChild.maxCurrentScores;
-			//
-			maxTotalVisitCount = topChild.maxTotalVisitCount;
-			maxCurrentVisitCount = topChild.maxCurrentVisitCount;
-		}
 	}
 
 	/**
@@ -600,6 +600,21 @@ public abstract class MCTNode {
 		return String.format(
 				"%s\n\t%s\n\t%s\n\t%s\n\t%s\n----------------------------------------", intro,
 				mean, max, c_mean, c_max);
+	}
+
+	public double getAlphaSurvivalScore() {
+		return (UCTSelection.alpha * getMaxSurvivalRate() + (1. - UCTSelection.alpha)
+				* getCurrentMaxSurvivals());
+	}
+
+	public double getAlphaPillScore() {
+		return UCTSelection.alpha * (getMaxPillScore() * getMaxSurvivalRate())
+				+ (1. - UCTSelection.alpha) * (getCurrentMaxPillScore() * getMaxSurvivalRate());
+	}
+
+	public double getAlphaGhostScore() {
+		return UCTSelection.alpha * (getMaxGhostScore() * getMaxSurvivalRate())
+				+ (1. - UCTSelection.alpha) * (getCurrentMaxGhostScore() * getMaxSurvivalRate());
 	}
 
 	public double getPillScore() {
