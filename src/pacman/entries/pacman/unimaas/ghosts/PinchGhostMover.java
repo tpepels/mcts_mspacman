@@ -83,7 +83,6 @@ public class PinchGhostMover {
 					dirs = gameState.getPossibleMoves(current, gameState.getGhostLastMoveMade(g));
 					MOVE move = dirs[XSRandom.r.nextInt(dirs.length)];
 					ghostMoves.put(g, move);
-
 				}
 			}
 			// Return the random moves.
@@ -159,8 +158,8 @@ public class PinchGhostMover {
 										move = dirs[j];
 										if (!isDoubleMove(g, move)) {
 											pacClose = true;
-											break;
 										}
+										break;
 									}
 								}
 							}
@@ -180,10 +179,10 @@ public class PinchGhostMover {
 											// System.out.println(g + " " + dirs[j] + " AT PAC FRONT");
 
 											move = dirs[j];
-											if (move == this.getNonDoubleMove(g, move)) {
+											if (!isDoubleMove(g, move)) {
 												pacClose = true;
-												break;
 											}
+											break;
 										}
 									}
 								}
@@ -193,11 +192,11 @@ public class PinchGhostMover {
 										Edge e = graph[current][dirs[j].ordinal()];
 										if (e.nodes[0] == pacFront || e.nodes[1] == pacFront) {
 											move = dirs[j];
-											if (move == this.getNonDoubleMove(g, move)) {
+											if (!isDoubleMove(g, move)) {
 												// System.out.println(g + " " + move + " BLOCKING FRONT");
 												pacClose = true;
-												break;
 											}
+											break;
 										}
 									}
 								}

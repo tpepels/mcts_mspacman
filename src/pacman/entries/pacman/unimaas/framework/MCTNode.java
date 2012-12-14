@@ -352,7 +352,9 @@ public abstract class MCTNode {
 
 	/**
 	 * Check based on some simple rules to determine if this node should be expanded
-	 * @param maxPathLength The maximum path-length for paths in the tree
+	 * 
+	 * @param maxPathLength
+	 *            The maximum path-length for paths in the tree
 	 * @return true if this node can be expanded, false otherwise
 	 */
 	public boolean canExpand(int maxPathLength) {
@@ -603,18 +605,18 @@ public abstract class MCTNode {
 	}
 
 	public double getAlphaSurvivalScore() {
-		return (UCTSelection.alpha * getMaxSurvivalRate() + (1. - UCTSelection.alpha)
+		return (UCTSelection.alpha_ps * getMaxSurvivalRate() + (1. - UCTSelection.alpha_ps)
 				* getCurrentMaxSurvivals());
 	}
 
 	public double getAlphaPillScore() {
-		return UCTSelection.alpha * (getMaxPillScore() * getMaxSurvivalRate())
-				+ (1. - UCTSelection.alpha) * (getCurrentMaxPillScore() * getMaxSurvivalRate());
+		return UCTSelection.alpha_ps * (getMaxPillScore() * getMaxSurvivalRate())
+				+ (1. - UCTSelection.alpha_ps) * (getCurrentMaxPillScore() * getMaxSurvivalRate());
 	}
 
 	public double getAlphaGhostScore() {
-		return UCTSelection.alpha * (getMaxGhostScore() * getMaxSurvivalRate())
-				+ (1. - UCTSelection.alpha) * (getCurrentMaxGhostScore() * getMaxSurvivalRate());
+		return UCTSelection.alpha_g * (getMaxGhostScore() * getMaxSurvivalRate())
+				+ (1. - UCTSelection.alpha_g) * (getCurrentMaxGhostScore() * getMaxSurvivalRate());
 	}
 
 	public double getPillScore() {

@@ -59,11 +59,20 @@ public class Executor {
 		Controller<EnumMap<GHOST, MOVE>> ghosts = new Legacy2TheReckoning();
 		MyPacMan pacman = new MyPacMan();
 		//
-		if (args[2].equals("alpha")) {
-			writeOutput("alpha");
+		if (args[2].equals("alpha_ps")) {
+			writeOutput("alpha_ps");
 			for (double u = .0; u <= 1.; u += .1) {
-				writeOutput(":: Alpha: " + u);
-				pacman.setAlpha(u);
+				writeOutput(":: Alpha_ps: " + u);
+				pacman.setAlpha_ps(u);
+				exec.runExperiment(pacman, ghosts, numTrials);
+			}
+		}
+		//
+		if (args[2].equals("alpha_g")) {
+			writeOutput("alpha_g");
+			for (double u = .0; u <= 1.; u += .1) {
+				writeOutput(":: Alpha_g: " + u);
+				pacman.setAlpha_g(u);
 				exec.runExperiment(pacman, ghosts, numTrials);
 			}
 		}

@@ -13,6 +13,7 @@ import pacman.game.Game;
 public class PacManMover {
 	//
 	public static int ghostDistT = 6;
+	private final double epsilon = .8;
 	//
 	private MOVE[] safeMoves, safeMoves2, moves, pacMoves, directionsRev;
 	private Edge[] junction;
@@ -280,10 +281,15 @@ public class PacManMover {
 
 			safeMoves2 = new MOVE[k];
 			//
-			int blueGhost = closestBlueGhost();
+			int blueGhost = -1;
 			MOVE closerToBlue = MOVE.NEUTRAL;
-			if (blueGhost > -1) {
-				closerToBlue = gameState.getNextMoveTowardsTarget(pacLocation, blueGhost, DM.PATH);
+			// Epsilon greedy ghost move
+			if (XSRandom.r.nextDouble() < epsilon) {
+				blueGhost = closestBlueGhost();
+				if (blueGhost > -1) {
+					closerToBlue = gameState.getNextMoveTowardsTarget(pacLocation, blueGhost,
+							DM.PATH);
+				}
 			}
 			//
 			int l = 0;

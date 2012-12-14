@@ -20,10 +20,10 @@ public class MyPacMan extends Controller<MOVE> {
 	private final MCTSelection selection = new UCTSelection();
 	// At this time, start eating ghosts a.s.a.p.
 	private final int endGameTime = Constants.MAX_TIME - 3000;
-	private final int maxPathLength = 50, maxSimulations = 100;
+	private final int maxPathLength = 60, maxSimulations = 110;
 	// penalties and discounts
-	private double reversePenalty = .9; // The reward penalty for selecting a reverse move
-	private double discount = .6; // Decay factor for the tree decay
+	private double reversePenalty = .8; // The reward penalty for selecting a reverse move
+	private double discount = .5; // Decay factor for the tree decay
 	// Set some slacktime for the search to ensure on time return of move
 	private int slackTime = 2; // Slack on simulations
 	private final int finalSlackTime = 1; // Total slack time
@@ -431,10 +431,14 @@ public class MyPacMan extends Controller<MOVE> {
 		this.safetyT = safetyT;
 	}
 
-	public void setAlpha(double alpha) {
-		UCTSelection.alpha = alpha;
+	public void setAlpha_ps(double alpha) {
+		UCTSelection.alpha_ps = alpha;
 	}
 
+	public void setAlpha_g(double alpha) {
+		UCTSelection.alpha_g = alpha;
+	}
+	
 	public void setUCTC(double UCTC) {
 		UCTSelection.C = UCTC;
 	}

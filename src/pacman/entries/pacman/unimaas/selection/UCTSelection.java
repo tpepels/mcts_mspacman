@@ -7,7 +7,7 @@ import pacman.entries.pacman.unimaas.framework.XSRandom;
 
 public class UCTSelection implements MCTSelection {
 
-	public static double C = 1., alpha = 0.7;
+	public static double C = .95, alpha_ps = 0.6, alpha_g = 0.2;
 	public static int minVisits = 10;
 	private SelectionType selectionType = SelectionType.SurvivalRate;
 
@@ -17,6 +17,7 @@ public class UCTSelection implements MCTSelection {
 		MCTNode selectedNode = null;
 		double bestValue = Double.NEGATIVE_INFINITY;
 		MCTNode[] children = P.getChildren();
+		double alpha = (selectionType == SelectionType.GhostScore) ? alpha_g : alpha_ps;
 		//
 		for (MCTNode c : children) {
 			double uctValue = 0., Vt = 0., Vc = 0.;
