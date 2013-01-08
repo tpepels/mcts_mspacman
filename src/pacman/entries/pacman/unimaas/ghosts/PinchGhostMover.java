@@ -4,7 +4,6 @@ import java.util.EnumMap;
 
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
 import pacman.entries.pacman.unimaas.framework.Edge;
-import pacman.entries.pacman.unimaas.framework.GhostMoveGenerator;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
 import pacman.game.Constants.DM;
 import pacman.game.Constants.GHOST;
@@ -19,7 +18,7 @@ import pacman.game.Game;
 public class PinchGhostMover {
 
 	// The per-ghost probabilities of making a greedy move.
-	public static double greedyP = .7;
+	public static double greedyP = .8;
 	public static int pacDistT = 6;
 	private DiscreteGame dGame;
 	private int trailGhost = -1, current;
@@ -91,15 +90,15 @@ public class PinchGhostMover {
 		//
 		if (dGame.getCurrentPacmanEdge() != null) {
 			if (dGame.isPacmanReversed()) {
-				//pacRearDist = dGame.pacManDistanceToHeading() + 1;
+				// pacRearDist = dGame.pacManDistanceToHeading() + 1;
 				pacFrontDist = dGame.pacManDistanceToRear() + 1;
 			} else {
 				pacFrontDist = dGame.pacManDistanceToHeading() + 1;
-				//pacRearDist = dGame.pacManDistanceToRear() + 1;
+				// pacRearDist = dGame.pacManDistanceToRear() + 1;
 			}
 		} else {
 			pacFrontDist = 0;
-			//pacRearDist = 0;
+			// pacRearDist = 0;
 		}
 		//
 		for (GHOST g : GHOST.values()) {
@@ -112,7 +111,6 @@ public class PinchGhostMover {
 						- Constants.EAT_DISTANCE;
 				boolean pacClose = false;
 				MOVE move = MOVE.NEUTRAL;
-
 				// Check if this ghost can make a killing move
 				if (!gameState.isGhostEdible(g) && gameState.isJunction(current)) {
 					//
@@ -135,69 +133,64 @@ public class PinchGhostMover {
 							pacClose = true;
 						}
 					}
-				}
+					//
+					if (!pacClose && g.ordinal() == trailGhost || targetVector[g.ordinal()]) {
+						//
+						if (current == pacRear) {
+							for (int j = 0; j < dirs.length; j++) {
+								if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j]
+										.ordinal()].uniqueId) {
+									// System.out.println(g + " " + dirs[j] + " AT PAC REAR");
+									move = dirs[j];
+									if (!isDoubleMove(g, move)) {
+										pacClose = true;
+									}
+									break;
+								}
+							}
+						}
+					} else if (current == pacFront) {
+						for (int j = 0; j < dirs.length; j++) {
+							if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j].ordinal()].uniqueId) {
+								// System.out.println(g + " " + dirs[j] + " AT PAC FRONT");
 
+								move = dirs[j];
+								if (!isDoubleMove(g, move)) {
+									pacClose = true;
+								}
+								break;
+							}
+						}
+					}
+				}
 				//
 				if (!pacClose && XSRandom.r.nextDouble() < greedyP) {
 					if (gameState.isGhostEdible(g)) {
 						// Edible == run away!.
 						move = gameState.getApproximateNextMoveAwayFromTarget(current, pacLoc,
 								lastMove, DM.PATH);
-						move = this.getNonDoubleMove(g, move);
+						move = getNonDoubleMove(g, move);
 						// System.out.println(g + " " + move + " EDIBLE");
 					} else {
 
 						// Try to corner the pacman by moving to its front or rear
 						if (g.ordinal() == trailGhost || targetVector[g.ordinal()]) {
-							//
-							if (current == pacRear && gameState.isJunction(current)) {
+							// Get closer to the rear position of pacman
+							move = gameState.getApproximateNextMoveTowardsTarget(current, pacRear,
+									lastMove, DM.PATH);
+
+						} else {
+							if (gameState.isJunction(current)) {
+								// Try to block off the front of pacman
 								for (int j = 0; j < dirs.length; j++) {
-									if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j]
-											.ordinal()].uniqueId) {
-										// System.out.println(g + " " + dirs[j] + " AT PAC REAR");
+									Edge e = graph[current][dirs[j].ordinal()];
+									if (e.nodes[0] == pacFront || e.nodes[1] == pacFront) {
 										move = dirs[j];
 										if (!isDoubleMove(g, move)) {
+											// System.out.println(g + " " + move + " BLOCKING FRONT");
 											pacClose = true;
 										}
 										break;
-									}
-								}
-							}
-							//
-							if (!pacClose) {
-								// Get closer to the rear position of pacman
-								move = gameState.getApproximateNextMoveTowardsTarget(current,
-										pacRear, lastMove, DM.PATH);
-							}
-						} else {
-							if (gameState.isJunction(current)) {
-								// //
-								if (current == pacFront) {
-									for (int j = 0; j < dirs.length; j++) {
-										if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j]
-												.ordinal()].uniqueId) {
-											// System.out.println(g + " " + dirs[j] + " AT PAC FRONT");
-
-											move = dirs[j];
-											if (!isDoubleMove(g, move)) {
-												pacClose = true;
-											}
-											break;
-										}
-									}
-								}
-								// Try to block off the front of pacman
-								if (!pacClose) {
-									for (int j = 0; j < dirs.length; j++) {
-										Edge e = graph[current][dirs[j].ordinal()];
-										if (e.nodes[0] == pacFront || e.nodes[1] == pacFront) {
-											move = dirs[j];
-											if (!isDoubleMove(g, move)) {
-												// System.out.println(g + " " + move + " BLOCKING FRONT");
-												pacClose = true;
-											}
-											break;
-										}
 									}
 								}
 							}
@@ -298,54 +291,54 @@ public class PinchGhostMover {
 	int[] nextNodes = new int[3];
 	int nextNodeCount = 0;
 
-	private int[] getNextNodes(int location, int currentEdge) {
-		nextEdges = dGame.getGraph()[location];
-		nextNodeCount = 0;
-		//
-		for (Edge edge : nextEdges) {
-			if (edge == null)
-				continue;
-			// PacMan is currently on this edge.
-			if (edge.uniqueId == currentEdge)
-				continue;
-			// Get the end of the next edge
-			if (edge.nodes[0] == location)
-				nextNodes[nextNodeCount] = edge.nodes[1];
-			else
-				nextNodes[nextNodeCount] = edge.nodes[0];
-			//
-			nextNodeCount++;
-		}
-		//
-		if (nextNodeCount < 3) {
-			int[] nodes = new int[nextNodeCount];
-			System.arraycopy(nextNodes, 0, nodes, 0, nextNodeCount);
-			return nodes;
-		} else {
-			return nextNodes;
-		}
-	}
-
-	private int getRandomNextNode(int location, int currentEdge) {
-		nextEdges = dGame.getGraph()[location];
-		nextNodeCount = 0;
-		//
-		for (Edge edge : nextEdges) {
-			if (edge == null)
-				continue;
-			// PacMan is currently on this edge.
-			if (edge.uniqueId == currentEdge)
-				continue;
-			// Get the end of the next edge
-			if (edge.nodes[0] == location)
-				nextNodes[nextNodeCount] = edge.nodes[1];
-			else
-				nextNodes[nextNodeCount] = edge.nodes[0];
-			//
-			nextNodeCount++;
-		}
-		return nextNodes[XSRandom.r.nextInt(nextNodeCount)];
-	}
+	// private int[] getNextNodes(int location, int currentEdge) {
+	// nextEdges = dGame.getGraph()[location];
+	// nextNodeCount = 0;
+	// //
+	// for (Edge edge : nextEdges) {
+	// if (edge == null)
+	// continue;
+	// // PacMan is currently on this edge.
+	// if (edge.uniqueId == currentEdge)
+	// continue;
+	// // Get the end of the next edge
+	// if (edge.nodes[0] == location)
+	// nextNodes[nextNodeCount] = edge.nodes[1];
+	// else
+	// nextNodes[nextNodeCount] = edge.nodes[0];
+	// //
+	// nextNodeCount++;
+	// }
+	// //
+	// if (nextNodeCount < 3) {
+	// int[] nodes = new int[nextNodeCount];
+	// System.arraycopy(nextNodes, 0, nodes, 0, nextNodeCount);
+	// return nodes;
+	// } else {
+	// return nextNodes;
+	// }
+	// }
+	//
+	// private int getRandomNextNode(int location, int currentEdge) {
+	// nextEdges = dGame.getGraph()[location];
+	// nextNodeCount = 0;
+	// //
+	// for (Edge edge : nextEdges) {
+	// if (edge == null)
+	// continue;
+	// // PacMan is currently on this edge.
+	// if (edge.uniqueId == currentEdge)
+	// continue;
+	// // Get the end of the next edge
+	// if (edge.nodes[0] == location)
+	// nextNodes[nextNodeCount] = edge.nodes[1];
+	// else
+	// nextNodes[nextNodeCount] = edge.nodes[0];
+	// //
+	// nextNodeCount++;
+	// }
+	// return nextNodes[XSRandom.r.nextInt(nextNodeCount)];
+	// }
 
 	private boolean pacManTrapped(GHOST ghost, int ghostJunction, MOVE ghostMove) {
 		frontBlocked = false;

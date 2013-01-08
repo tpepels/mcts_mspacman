@@ -22,14 +22,14 @@ public class XSRandom extends Random {
         this.seed = seed;
     }
 
-    @Override
-	protected int next(int nbits) {
-        long x = seed;
-        x ^= (x << 21);
-        x ^= (x >>> 35);
-        x ^= (x << 4);
-        seed = x;
-        x &= ((1L << nbits) - 1);
-        return (int) x;
-    }
+//    @Override
+//	protected int next(int nbits) {
+//        long x = seed;
+//        x ^= (x << 21);
+//        x ^= (x >>> 35);
+//        x ^= (x << 4);
+//        seed = x;
+//        x &= ((1L << nbits) - 1);
+//        return (int) x;
+//    }
 }

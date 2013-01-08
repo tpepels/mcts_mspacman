@@ -14,7 +14,6 @@ import pacman.game.Constants;
 import pacman.game.Constants.GHOST;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
-import pacman.game.GameView;
 
 /**
  * 
@@ -323,14 +322,10 @@ public class StrategySimulation implements MCTSimulation {
 		int i = 0, steps = 0, destination;
 		tempGame = null;
 		tempDGame = null;
-		boolean clearedEdgeOnPath = false;
-		// MOVE[] moves;
-		// boolean moveOK = false;
 		treePhase = 0;
 		for (i = pathMoves.length - 1; i >= 0; i--) {
 			// Execute the first path-move to determine a direction
 			pacMove = pathMoves[i];
-			clearedEdgeOnPath = false;
 			//
 			try {
 				advanceGame();
@@ -381,11 +376,10 @@ public class StrategySimulation implements MCTSimulation {
 					break;
 				}
 				// clearedEdgeOnPath = edgeCleared;
-				clearedEdgeOnPath = false;
 				//
 			}
 			//
-			if (died || nextMaze || ateGhost || atePower || illegalPP || clearedEdgeOnPath) {
+			if (died || nextMaze || ateGhost || atePower || illegalPP) {
 				break;
 			}
 		}
@@ -410,7 +404,7 @@ public class StrategySimulation implements MCTSimulation {
 		}
 
 		if (maxSimulations < 20) {
-			maxSimulations = 20;
+			System.err.println("almost not simulations left!");
 		}
 		// Playout phase
 		if (!died && !nextMaze && !illegalPP) {

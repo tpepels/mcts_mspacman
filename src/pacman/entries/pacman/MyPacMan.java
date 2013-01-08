@@ -4,7 +4,6 @@ import pacman.controllers.Controller;
 import pacman.entries.pacman.unimaas.SinglePlayerNode;
 import pacman.entries.pacman.unimaas.framework.*;
 import pacman.entries.pacman.unimaas.ghosts.PinchGhostMover;
-import pacman.entries.pacman.unimaas.pacman.PacManMover;
 import pacman.entries.pacman.unimaas.selection.UCTSelection;
 import pacman.entries.pacman.unimaas.simulation.StrategySimulation;
 import pacman.game.Constants;
@@ -14,23 +13,23 @@ import pacman.game.Constants.*;
 
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
-	private final boolean DEBUG = false;
+	private boolean DEBUG = false;
 	// To use different simulation strategy or selection, set them here.
 	private final StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
 	// At this time, start eating ghosts a.s.a.p.
 	private final int endGameTime = Constants.MAX_TIME - 3000;
-	private final int maxPathLength = 60, maxSimulations = 110;
+	private final int maxPathLength = 40, maxSimulations = 160;
 	// penalties and discounts
-	private double reversePenalty = .8; // The reward penalty for selecting a reverse move
-	private double discount = .5; // Decay factor for the tree decay
+	private double reversePenalty = .9; // The reward penalty for selecting a reverse move
+	private double discount = .6; // Decay factor for the tree decay
 	// Set some slacktime for the search to ensure on time return of move
 	private int slackTime = 2; // Slack on simulations
 	private final int finalSlackTime = 1; // Total slack time
 	// Safety and minimum ghost score parameters.
-	private double safetyT = .75, ghostSelectScore = .4;
-	private double hardSafetyT = .85, hardGhostSelectScore = .3;
-	private double easySafetyT = .7, easyGhostSelectScore = .5;
+	private double safetyT = .75, ghostSelectScore = .45;
+	private double hardSafetyT = .8, hardGhostSelectScore = .35;
+	private double easySafetyT = .7, easyGhostSelectScore = .55;
 	//
 	private boolean atJunction = false, prevLocationWasJunction = false;
 	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
@@ -44,7 +43,7 @@ public class MyPacMan extends Controller<MOVE> {
 	private Edge[][] graph = null;
 	private DiscreteGame dGame = null;
 	private Game gameState;
-	private SinglePlayerNode root;
+	private SinglePlayerNode root, lastJunctionRoot;
 	private Edge currentPacmanEdge;
 	private SelectionType selectionType;
 
@@ -55,7 +54,7 @@ public class MyPacMan extends Controller<MOVE> {
 		updateDiscreteGamePreMove();
 		CauseOfDeath.reset();
 		setSelectionType();
-		root = setupTree();
+		setupTree();
 		// Run the simulations
 		runSimulations(timeDue - slackTime);
 		//
@@ -117,6 +116,8 @@ public class MyPacMan extends Controller<MOVE> {
 		// Reset the prevlocation value
 		if (!atJunction) {
 			prevLocationWasJunction = false;
+		} else {
+			lastJunctionRoot = root;
 		}
 
 		// This makes sure moves are always returned on time
@@ -141,9 +142,13 @@ public class MyPacMan extends Controller<MOVE> {
 
 	/**
 	 * Should be called AFTER updateDiscreteGamePreMove() and setSelectionType()
+	 * 
 	 * @return The root-node of the tree to be used by search
 	 */
-	private SinglePlayerNode setupTree() {
+	private void setupTree() {
+//		root = new SinglePlayerNode(dGame, gameState);
+//		return;
+//		/*
 		// re-use the game tree
 		// The discrete rulles for tossing the tree:
 		// 1. Pac-man was eaten or gone to next level
@@ -269,7 +274,6 @@ public class MyPacMan extends Controller<MOVE> {
 			root.propagateMaxValues(selectionType);
 		}
 		root.setEdge(currentPacmanEdge);
-		return root;
 	}
 
 	/**
@@ -438,7 +442,7 @@ public class MyPacMan extends Controller<MOVE> {
 	public void setAlpha_g(double alpha) {
 		UCTSelection.alpha_g = alpha;
 	}
-	
+
 	public void setUCTC(double UCTC) {
 		UCTSelection.C = UCTC;
 	}
@@ -562,7 +566,7 @@ public class MyPacMan extends Controller<MOVE> {
 		}
 		//
 		atJunction = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
-		// DEBUG = atJunction;
+		DEBUG = atJunction;
 		//
 		// if (nextMoveTargetSelection && atJunction) {
 		// currentTarget = getTarget();
@@ -596,12 +600,13 @@ public class MyPacMan extends Controller<MOVE> {
 
 			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)) {
 				try {
-					if (dGame.getGraph()[ghostJunctions[g.ordinal()]][gameState.getGhostLastMoveMade(g).ordinal()] != null) {
+					if (dGame.getGraph()[ghostJunctions[g.ordinal()]][gameState
+							.getGhostLastMoveMade(g).ordinal()] != null) {
 						dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()],
 								gameState.getGhostLastMoveMade(g));
 					}
 				} catch (Exception ex) {
-					//System.err.println("Ghost on wrong edge!");
+					// System.err.println("Ghost on wrong edge!");
 				}
 			}
 			// Reset the ghost statuses

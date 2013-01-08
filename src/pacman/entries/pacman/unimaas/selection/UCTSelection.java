@@ -7,7 +7,7 @@ import pacman.entries.pacman.unimaas.framework.XSRandom;
 
 public class UCTSelection implements MCTSelection {
 
-	public static double C = .95, alpha_ps = 0.6, alpha_g = 0.2;
+	public static double C = .9, alpha_ps = .7, alpha_g = .2;
 	public static int minVisits = 10;
 	private SelectionType selectionType = SelectionType.SurvivalRate;
 

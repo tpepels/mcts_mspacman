@@ -45,7 +45,8 @@ public final class Maze
 	{
         try
         {         	
-        	BufferedReader br=new BufferedReader(new InputStreamReader(new FileInputStream(pathMazes+System.getProperty("file.separator")+fileName+".txt")));	 
+        	@SuppressWarnings("resource")
+			BufferedReader br=new BufferedReader(new InputStreamReader(new FileInputStream(pathMazes+System.getProperty("file.separator")+fileName+".txt")));	 
             String input=br.readLine();		
             
             //preamble
@@ -104,7 +105,8 @@ public final class Maze
 		
         try
         {
-        	BufferedReader br=new BufferedReader(new InputStreamReader(new FileInputStream(pathDistances+System.getProperty("file.separator")+fileName)));
+        	@SuppressWarnings("resource")
+			BufferedReader br=new BufferedReader(new InputStreamReader(new FileInputStream(pathDistances+System.getProperty("file.separator")+fileName)));
             String input=br.readLine();
             
             int index=0;

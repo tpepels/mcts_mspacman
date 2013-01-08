@@ -312,7 +312,7 @@ public abstract class MCTNode {
 			for (MCTNode child : children) {
 				// Do not use values of unvisited children
 				if (child.currentVisitCount < UCTSelection.minVisits
-						|| child.getMaxSurvivalRate() < minRate) {
+						|| child.getAlphaSurvivalScore() < minRate) {
 					continue;
 				}
 				if (selectionType == SelectionType.SurvivalRate) {
@@ -611,12 +611,13 @@ public abstract class MCTNode {
 
 	public double getAlphaPillScore() {
 		return UCTSelection.alpha_ps * (getMaxPillScore() * getMaxSurvivalRate())
-				+ (1. - UCTSelection.alpha_ps) * (getCurrentMaxPillScore() * getMaxSurvivalRate());
+				+ (1. - UCTSelection.alpha_ps)
+				* (getCurrentMaxPillScore() * getCurrentMaxSurvivals());
 	}
 
 	public double getAlphaGhostScore() {
-		return UCTSelection.alpha_g * (getMaxGhostScore() * getMaxSurvivalRate())
-				+ (1. - UCTSelection.alpha_g) * (getCurrentMaxGhostScore() * getMaxSurvivalRate());
+		return UCTSelection.alpha_g * (getMaxGhostScore()) + (1. - UCTSelection.alpha_g)
+				* (getCurrentMaxGhostScore()) * getAlphaSurvivalScore();
 	}
 
 	public double getPillScore() {

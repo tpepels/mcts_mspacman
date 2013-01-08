@@ -125,15 +125,15 @@ public class Executor {
 		for (i = 0; i < trials; i++) {
 			game = new Game(rnd.nextLong());
 			//
-			try {
+//			try {
 				while (!game.gameOver()) {
 					game.advanceGame(pacManController.getMove(game.copy(),
 							System.currentTimeMillis() + DELAY), ghostController.getMove(
 							game.copy(), System.currentTimeMillis() + DELAY));
 				}
-			} catch (Exception ex) {
-				System.err.println("Exception caught, running next game. " + ex.getMessage());
-			}
+//			} catch (Exception ex) {
+//				System.err.println("Exception caught, running next game. " + ex.getMessage());
+//			}
 
 			writeOutput(game.getScore() + "\t" + game.getPacmanNumberOfLivesRemaining() + "\t"
 					+ game.getCurrentLevel());
@@ -381,6 +381,7 @@ public class Executor {
 		ArrayList<String> replay = new ArrayList<String>();
 
 		try {
+			@SuppressWarnings("resource")
 			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
 					fileName)));
 			String input = br.readLine();
