@@ -2,20 +2,22 @@ package pacman.entries.pacman.unimaas.pacman;
 
 import java.util.Random;
 
-import pacman.controllers.Controller;
+import pacman.entries.pacman.unimaas.framework.PacManMoveGenerator;
+import pacman.entries.pacman.unimaas.framework.SelectionType;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
-/**
- * The Class RandomNonRevPacMan.
- */
-public final class RandomNonRevPacMan extends Controller<MOVE> {
+public final class RandomNonRevPacMan implements PacManMoveGenerator {
 	Random rnd = new Random();
-
-	@Override
-	public MOVE getMove(Game game, long timeDue) {
-		MOVE[] possibleMoves = game.getPossibleMoves(game.getPacmanCurrentNodeIndex(),
-				game.getPacmanLastMoveMade()); 
+	Game gameState;
+	
+	public RandomNonRevPacMan(Game game) {
+		gameState = game;
+	}
+	
+	public MOVE generatePacManMove(SelectionType selectionType) {
+		MOVE[] possibleMoves = gameState.getPossibleMoves(gameState.getPacmanCurrentNodeIndex(),
+				gameState.getPacmanLastMoveMade()); 
 
 		return possibleMoves[rnd.nextInt(possibleMoves.length)];
 	}

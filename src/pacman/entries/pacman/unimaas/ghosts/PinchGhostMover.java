@@ -4,6 +4,7 @@ import java.util.EnumMap;
 
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
 import pacman.entries.pacman.unimaas.framework.Edge;
+import pacman.entries.pacman.unimaas.framework.GhostMoveGenerator;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
 import pacman.game.Constants.DM;
 import pacman.game.Constants.GHOST;
@@ -15,7 +16,7 @@ import pacman.game.Game;
  * 
  * @author Tom Pepels, Maastricht University
  */
-public class PinchGhostMover {
+public class PinchGhostMover implements GhostMoveGenerator {
 
 	// The per-ghost probabilities of making a greedy move.
 	public static double greedyP = .8;
@@ -44,8 +45,9 @@ public class PinchGhostMover {
 		this.dGame = dGame;
 		this.graph = dGame.getGraph();
 	}
-
-	public EnumMap<GHOST, MOVE> generateGhostMoves(boolean debug) {
+	
+	@Override
+	public EnumMap<GHOST, MOVE> generateGhostMoves() {
 		ghostMoves.clear();
 		LGRMoves.clear();
 

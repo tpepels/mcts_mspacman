@@ -4,12 +4,15 @@ import java.util.EnumMap;
 
 import pacman.entries.pacman.unimaas.framework.CauseOfDeath;
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
+import pacman.entries.pacman.unimaas.framework.GhostMoveGenerator;
 import pacman.entries.pacman.unimaas.framework.MCTResult;
-import pacman.entries.pacman.unimaas.framework.MCTSimulation;
+import pacman.entries.pacman.unimaas.framework.PacManMoveGenerator;
 import pacman.entries.pacman.unimaas.framework.SelectionType;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
+import pacman.entries.pacman.unimaas.ghosts.AggressiveGhosts;
 import pacman.entries.pacman.unimaas.ghosts.PinchGhostMover;
 import pacman.entries.pacman.unimaas.pacman.PacManMover;
+import pacman.entries.pacman.unimaas.pacman.RandomNonRevPacMan;
 import pacman.game.Constants;
 import pacman.game.Constants.GHOST;
 import pacman.game.Constants.MOVE;
@@ -19,7 +22,7 @@ import pacman.game.Game;
  * 
  * @author Tom Pepels, Maastricht University
  */
-public class StrategySimulation implements MCTSimulation {
+public class StrategySimulation {
 	// DEBUG
 	// private GameView gv;
 	// private final boolean DEBUG = false;
@@ -32,8 +35,8 @@ public class StrategySimulation implements MCTSimulation {
 	public static boolean trailGhost = false;
 	public static double sminGhostNorm = .5, sdecreasedMinGhostNorm = .4, easyMinGhostNorm = .6;
 	//
-	private PinchGhostMover ghostMover;
-	private PacManMover pacManMover;
+	private GhostMoveGenerator ghostMover;
+	private PacManMoveGenerator pacManMover;
 	private DiscreteGame dGame;
 	private SelectionType selectionType;
 	private Game gameState;
@@ -100,8 +103,7 @@ public class StrategySimulation implements MCTSimulation {
 			}
 			// Remember the decisions that ghosts made at junctions
 			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)) {
-				dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()],
-						ghostMoves.get(g));
+				dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
 			}
 			// Reset the ghost statuses
 			if (gameState.isJunction(gameState.getGhostCurrentNodeIndex(g))) {
@@ -129,7 +131,7 @@ public class StrategySimulation implements MCTSimulation {
 		//
 		lastMove = gameState.getPacmanLastMoveMade();
 		currentEdgesVisited = dGame.getVisitedEdgeCount();
-		ghostMoves = ghostMover.generateGhostMoves(false);
+		ghostMoves = ghostMover.generateGhostMoves();
 		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMoves);
 
 		// Check if pacman died this turn
@@ -261,9 +263,8 @@ public class StrategySimulation implements MCTSimulation {
 		return frontBlocked && rearBlocked;
 	}
 
-	@Override
 	public MCTResult playout(DiscreteGame discreteGame, Game state, MOVE[] pathMoves,
-			int[] pacLocations, int maxSims, SelectionType selectionType) {
+			int[] pacLocations, int maxSims, SelectionType selectionType, boolean strategic) {
 		//
 		this.selectionType = selectionType;
 		this.gameState = state;
@@ -282,7 +283,12 @@ public class StrategySimulation implements MCTSimulation {
 		// gv = new GameView(gameState).showGame();
 		// }
 		pacLocation = gameState.getPacmanCurrentNodeIndex();
-		ghostMover = new PinchGhostMover(gameState, dGame);
+		if (strategic) {
+			ghostMover = new PinchGhostMover(gameState, dGame);
+		} else {
+			ghostMover = new AggressiveGhosts(gameState);
+		}
+
 		// Set the targets for the ghosts
 		if (trailGhost) {
 			if (!lastGoodTG)
@@ -297,7 +303,11 @@ public class StrategySimulation implements MCTSimulation {
 			((PinchGhostMover) ghostMover).setTargetVector(ghostVector);
 		}
 		//
-		pacManMover = new PacManMover(gameState, dGame);
+		if (strategic) {
+			pacManMover = new PacManMover(gameState, dGame);
+		} else {
+			pacManMover = new RandomNonRevPacMan(gameState);
+		}
 		// Set the pre-game variables, these will be used for scoring later
 		pillsBefore = gameState.getNumberOfActivePills();
 		mazeBefore = gameState.getMazeIndex();
@@ -404,7 +414,9 @@ public class StrategySimulation implements MCTSimulation {
 		}
 
 		if (maxSimulations < 20) {
-			System.err.println("almost not simulations left!");
+			// System.err.println("almost not simulations left!");
+			// Just make sure we still have some randomness left
+			maxSimulations = 20;
 		}
 		// Playout phase
 		if (!died && !nextMaze && !illegalPP) {
@@ -494,13 +506,5 @@ public class StrategySimulation implements MCTSimulation {
 			pillNorm /= 10.;
 		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
-	}
-
-	@Override
-	public MCTResult playout(DiscreteGame dGame, Game state, MOVE[] pathMoves, int[] pacLocations,
-			int maxSimulations, SelectionType selectionType, int target) {
-		MCTResult result = playout(dGame, state, pathMoves, pacLocations, maxSimulations,
-				selectionType);
-		return result;
 	}
 }

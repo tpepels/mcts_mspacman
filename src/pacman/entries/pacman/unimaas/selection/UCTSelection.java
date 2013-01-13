@@ -7,7 +7,7 @@ import pacman.entries.pacman.unimaas.framework.XSRandom;
 
 public class UCTSelection implements MCTSelection {
 
-	public static double C = .9, alpha_ps = .7, alpha_g = .2;
+	public static double C = .9, alpha_ps = .7, alpha_g = .3;
 	public static int minVisits = 10;
 	private SelectionType selectionType = SelectionType.SurvivalRate;
 
@@ -53,7 +53,7 @@ public class UCTSelection implements MCTSelection {
 			} else {
 				uctValue = alpha
 						* (Vt + (C * Math.sqrt(Math.log(P.getVisitCount()) / c.getVisitCount())))
-						+ ((1 - alpha) * (Vc + (C * Math.sqrt(Math.log(P.getCurrentVisitCount())
+						+ ((1. - alpha) * (Vc + (C * Math.sqrt(Math.log(P.getCurrentVisitCount())
 								/ c.getCurrentVisitCount()))));
 			}
 

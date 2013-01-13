@@ -94,6 +94,67 @@ public class Executor {
 				exec.runExperiment(pacman, ghosts, numTrials);
 			}
 		}
+		//
+		if (args[2].equals("path")) {
+			writeOutput("path");
+			for (int u = 10; u <= 100; u += 10) {
+				writeOutput(":: Max path length: " + u);
+				pacman.maxPathLength = u;
+				exec.runExperiment(pacman, ghosts, numTrials);
+			}
+		}
+		//
+		if (args[2].equals("simulations")) {
+			writeOutput("simulations");
+			for (int u = 80; u <= 250; u += 20) {
+				writeOutput(":: Max simulations : " + u);
+				pacman.maxSimulations = u;
+				exec.runExperiment(pacman, ghosts, numTrials);
+			}
+		}
+		// reuse = true, decay = true, var_depth = true, strategic_playout = true;
+		//
+		if (args[2].equals("reuse")) {
+			writeOutput("no reuse");
+			pacman.reuse = false;
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
+		//
+		if (args[2].equals("decay")) {
+			writeOutput("no decay");
+			pacman.decay = false;
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
+		//
+		if (args[2].equals("var_depth")) {
+			writeOutput("fixed depth");
+			pacman.var_depth = false;
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
+		//
+		if (args[2].equals("strat_playout")) {
+			writeOutput("no strategic playout");
+			pacman.strategic_playout = false;
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
+		//
+		if (args[2].equals("eiisolver")) {
+			writeOutput("eiisolver");
+			ghosts = new pacman.opponents.Ghosts.eiisolver.MyGhosts();
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
+		//
+		if (args[2].equals("ghostbuster")) {
+			writeOutput("ghostbuster");
+			ghosts = new pacman.opponents.Ghosts.ghostbuster.MyGhosts();
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
+		//
+		if (args[2].equals("memetix")) {
+			writeOutput("memetix");
+			ghosts = new pacman.opponents.Ghosts.memetix.MyGhosts();
+			exec.runExperiment(pacman, ghosts, numTrials);
+		}
 	}
 
 	private static String outFile;

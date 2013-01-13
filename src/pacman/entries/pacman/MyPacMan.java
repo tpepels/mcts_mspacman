@@ -13,15 +13,15 @@ import pacman.game.Constants.*;
 
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
-	private boolean DEBUG = false;
+	private final boolean DEBUG = false;
 	// To use different simulation strategy or selection, set them here.
-	private final StrategySimulation simulation = new StrategySimulation();
+	private StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
 	// At this time, start eating ghosts a.s.a.p.
 	private final int endGameTime = Constants.MAX_TIME - 3000;
-	private final int maxPathLength = 40, maxSimulations = 160;
+	public int maxPathLength = 50, maxSimulations = 160;
 	// penalties and discounts
-	private double reversePenalty = .9; // The reward penalty for selecting a reverse move
+	private double reversePenalty = .8; // The reward penalty for selecting a reverse move
 	private double discount = .6; // Decay factor for the tree decay
 	// Set some slacktime for the search to ensure on time return of move
 	private int slackTime = 2; // Slack on simulations
@@ -46,7 +46,10 @@ public class MyPacMan extends Controller<MOVE> {
 	private SinglePlayerNode root, lastJunctionRoot;
 	private Edge currentPacmanEdge;
 	private SelectionType selectionType;
-
+	//
+	public boolean reuse = true, decay = true, var_depth = true, strategic_playout = true;
+	public int maxNodeDepth = 5;
+	
 	@Override
 	public MOVE getMove(Game game, long timeDue) {
 		//
@@ -146,9 +149,11 @@ public class MyPacMan extends Controller<MOVE> {
 	 * @return The root-node of the tree to be used by search
 	 */
 	private void setupTree() {
-//		root = new SinglePlayerNode(dGame, gameState);
-//		return;
-//		/*
+		if(!reuse) {
+		 root = new SinglePlayerNode(dGame, gameState);
+		 root.setEdge(currentPacmanEdge);
+		 return;
+		}
 		// re-use the game tree
 		// The discrete rulles for tossing the tree:
 		// 1. Pac-man was eaten or gone to next level
@@ -193,7 +198,8 @@ public class MyPacMan extends Controller<MOVE> {
 			//
 			root.setGameState(gameState.copy());
 			root.setdGame(dGame.copy());
-			root.discountValues(discount);
+			if(decay)
+				root.discountValues(discount);
 			root.propagateMaxValues(selectionType);
 			//
 		} else if (prevLocationWasJunction) {
@@ -246,7 +252,8 @@ public class MyPacMan extends Controller<MOVE> {
 			//
 			root.setGameState(gameState.copy());
 			root.setdGame(dGame.copy());
-			root.discountValues(discount);
+			if(decay)
+				root.discountValues(discount);
 			// Correct the max-values
 			root.propagateMaxValues(selectionType);
 		} else {
@@ -269,7 +276,8 @@ public class MyPacMan extends Controller<MOVE> {
 			}
 			root.setGameState(gameState.copy());
 			root.setdGame(dGame.copy());
-			root.discountValues(discount);
+			if(decay)
+				root.discountValues(discount);
 			// Correct the max-values
 			root.propagateMaxValues(selectionType);
 		}
@@ -414,14 +422,14 @@ public class MyPacMan extends Controller<MOVE> {
 			simulationNode = expandNode;
 
 			// Check if the expandnode can be expanded
-			if (expandNode.canExpand(maxPathLength)) {
+			if (expandNode.canExpand(maxPathLength, var_depth, maxNodeDepth)) {
 				expandNode.expand(root.getdGame(), root);
 				simulationNode = expandNode.selection(selection, true);
 			}
 			// Start a simulation using the path from the root.
 			MCTResult result;
 			result = simulationNode.simulate(simulation, maxSimulations + maxPathLength,
-					selectionType, currentTarget);
+					selectionType, currentTarget, strategic_playout);
 			// Propagate the result from the expanded child to the root
 			simulationNode.backPropagate(result, selectionType, simulation.getTreePhaseSteps());
 		}
@@ -566,7 +574,7 @@ public class MyPacMan extends Controller<MOVE> {
 		}
 		//
 		atJunction = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
-		DEBUG = atJunction;
+		// DEBUG = atJunction;
 		//
 		// if (nextMoveTargetSelection && atJunction) {
 		// currentTarget = getTarget();

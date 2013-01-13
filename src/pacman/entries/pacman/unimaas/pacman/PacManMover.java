@@ -2,6 +2,7 @@ package pacman.entries.pacman.unimaas.pacman;
 
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
 import pacman.entries.pacman.unimaas.framework.Edge;
+import pacman.entries.pacman.unimaas.framework.PacManMoveGenerator;
 import pacman.entries.pacman.unimaas.framework.SelectionType;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
 import pacman.game.Constants;
@@ -10,7 +11,7 @@ import pacman.game.Constants.GHOST;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
-public class PacManMover {
+public class PacManMover implements PacManMoveGenerator {
 	//
 	public static int ghostDistT = 6;
 	private final double epsilon = .8;
@@ -250,7 +251,7 @@ public class PacManMover {
 			return -1;
 		}
 	}
-
+	
 	public MOVE generatePacManMove(SelectionType selectionType) {
 		safety = -1;
 		pacLocation = gameState.getPacmanCurrentNodeIndex();

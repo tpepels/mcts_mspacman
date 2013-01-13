@@ -3,6 +3,7 @@ package pacman.entries.pacman.unimaas.framework;
 import java.text.DecimalFormat;
 
 import pacman.entries.pacman.unimaas.selection.UCTSelection;
+import pacman.entries.pacman.unimaas.simulation.StrategySimulation;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 
@@ -357,9 +358,14 @@ public abstract class MCTNode {
 	 *            The maximum path-length for paths in the tree
 	 * @return true if this node can be expanded, false otherwise
 	 */
-	public boolean canExpand(int maxPathLength) {
+	public boolean canExpand(int maxPathLength, boolean variable_depth, int maxNodeDepth) {
 		if (!isRoot()) {
-			if (getPathLength() <= maxPathLength) {
+			if (variable_depth && getPathLength() <= maxPathLength) {
+				// Don't expand nodes that have not been simulated
+				if (currentVisitCount < UCTSelection.minVisits) {
+					return false;
+				}
+			} else if (!variable_depth && depth <= maxNodeDepth) {
 				// Don't expand nodes that have not been simulated
 				if (currentVisitCount < UCTSelection.minVisits) {
 					return false;
@@ -557,8 +563,8 @@ public abstract class MCTNode {
 	 * @param simulation
 	 *            The simulation-class to use for simulating the playout
 	 */
-	public MCTResult simulate(MCTSimulation simulation, int simCount, SelectionType selectionType,
-			int target) {
+	public MCTResult simulate(StrategySimulation simulation, int simCount, SelectionType selectionType,
+			int target, boolean strategic) {
 		// Do a simulation starting at the root's game state
 		selectedNode = this;
 		pacLocations = new int[selectedNode.depth + 1];
@@ -578,7 +584,7 @@ public abstract class MCTNode {
 		DiscreteGame disGame = selectedNode.getdGame().copy();
 		//
 		return simulation
-				.playout(disGame, interState, moves, pacLocations, simCount, selectionType);
+				.playout(disGame, interState, moves, pacLocations, simCount, selectionType, strategic);
 	}
 
 	@Override
