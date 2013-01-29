@@ -30,10 +30,11 @@ public class StrategySimulation {
 	// private DiscreteGame debugDGameState;
 	// !DEBUG
 	//
+	public final int numPills[] = { 220, 240, 238, 234 };
 	public static int minSteps = 1;
-	public static double pillPower = 1.2;
+	public static double pillPower = 1.1;
 	public static boolean trailGhost = false;
-	public static double sminGhostNorm = .4, hardMinGhostNorm = .3, easyMinGhostNorm = .5;
+	public static double sminGhostNorm = .45, hardMinGhostNorm = .4, easyMinGhostNorm = .55;
 	//
 	public double pp_penalty1 = .2, pp_penalty2 = .1;
 	public boolean last_good_config = true;
@@ -301,20 +302,20 @@ public class StrategySimulation {
 
 		// Set the targets for the ghosts
 		if (trailGhost) {
-			
+
 			if (!lastGoodTG || !last_good_config) {
 				lastGoodTrailGhost = XSRandom.r.nextInt(Constants.NUM_GHOSTS);
 			}
-			
+
 			((PinchGhostMover) ghostMover).setTrailGhost(lastGoodTrailGhost);
 		} else {
-			
+
 			if (!lastGoodTv || !last_good_config) {
 				for (int i = 0; i < Constants.NUM_GHOSTS; i++) {
 					ghostVector[i] = XSRandom.r.nextBoolean();
 				}
 			}
-			
+
 			((PinchGhostMover) ghostMover).setTargetVector(ghostVector);
 		}
 		//
@@ -324,9 +325,19 @@ public class StrategySimulation {
 			pacManMover = new RandomNonRevPacMan(gameState);
 		}
 		// Set the pre-game variables, these will be used for scoring later
-		pillsBefore = gameState.getNumberOfActivePills();
+		// pillsBefore = gameState.getNumberOfActivePills();
+		pillsBefore = numPills[gameState.getMazeIndex()];
 		mazeBefore = gameState.getMazeIndex();
 		pwrPillsBefore = gameState.getNumberOfActivePowerPills();
+		//
+		double ghostDivisor = 0.;
+		// The edibletimes for the ghosts at the start of the simulation
+		for (GHOST g : GHOST.values()) {
+			// Remember if a ghost was edible for scoring using edible times
+			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
+				ghostDivisor += gameState.getGhostEdibleTime(g);
+			}
+		}
 
 		// Reset the scoring values
 		pillsEaten = 0;
@@ -493,10 +504,12 @@ public class StrategySimulation {
 		}
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
-			// Mathemagics!!
-			double ghostDivisor = Constants.NUM_GHOSTS
-					* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
-							gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
+			if (ghostDivisor == 0) {
+				// Mathemagics!!
+				ghostDivisor = Constants.NUM_GHOSTS
+						* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
+								gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
+			}
 			ghostNorm = ghostsEaten / ghostDivisor;
 			//
 			if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()

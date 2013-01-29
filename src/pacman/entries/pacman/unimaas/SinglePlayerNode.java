@@ -70,7 +70,6 @@ public class SinglePlayerNode extends MCTNode {
 				}
 
 			}
-
 			// Pacman is not at a junction in the gamestate,
 			// hence find the junctions connected to pacman.
 		} else if (this.getEdgeId() != -1) {

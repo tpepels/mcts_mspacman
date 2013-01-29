@@ -136,6 +136,7 @@ public class MyPacMan extends Controller<MOVE> {
 				earlyCount = 0;
 			}
 		}
+		// root.validate(gameState);
 		//
 		return move;
 	}
@@ -158,7 +159,7 @@ public class MyPacMan extends Controller<MOVE> {
 			// 2. There was a global reversal event
 			// 3. Pac-man ate a ghost
 			// 4. Pac-man ate a power-pill
-			if (gameState.wasPacManEaten() || gameState.getCurrentLevelTime() == 0 || root == null
+			if (gameState.wasPacManEaten() || gameState.getCurrentLevelTime() < 2 || root == null
 					|| gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)
 					|| gameState.getNumGhostsEaten() > 0 || gameState.wasPowerPillEaten()) {
 				root = new SinglePlayerNode(dGame, gameState);
@@ -508,10 +509,11 @@ public class MyPacMan extends Controller<MOVE> {
 		// First call should create a new discrete gamestate each game
 		if (gameState.getTotalTime() == 0 || dGame == null) {
 			dGame = new DiscreteGame(gameState);
-			this.timesDiedInFirstMaze = 0;
+			timesDiedInFirstMaze = 0;
 		}
 		// Either the game just started or pacman entered a new maze
 		if (gameState.getMazeIndex() != currentMaze || gameState.getTotalTime() == 0) {
+			//System.out.println("Maze: " + gameState.getMazeIndex() + " pills: " + gameState.getNumberOfActivePills());
 			dGame.setCurrentMaze(gameState);
 			graph = dGame.getGraph();
 			//

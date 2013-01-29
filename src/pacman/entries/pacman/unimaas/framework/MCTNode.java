@@ -59,8 +59,8 @@ public abstract class MCTNode {
 	/**
 	 * Constructor for MCT node
 	 * 
-	 * @param gameState
-	 *            The gamestate of the node
+	 * @param game
+	 *            StateThe gamestate of the node
 	 * @param parent
 	 *            The parent of the node.
 	 * @param playerNode
@@ -143,6 +143,49 @@ public abstract class MCTNode {
 			//
 			maxTotalVisitCount = totalVisitCount;
 			maxCurrentVisitCount = currentVisitCount;
+		}
+	}
+	
+	/**
+	 * Validate the tree using the gamestate to check all junctions
+	 * @param game
+	 */
+	public void validate(Game game) {
+		if(isRoot() && children != null) {
+			if(junctionIndex != -1) {
+				// Check if this is actually pacman's position
+				if(game.getPacmanCurrentNodeIndex() != junctionIndex) {
+					System.err.println("Error at root, pacman is not on junction.");
+				}
+				// Check if the number of children match the possible options
+				if(game.getPossibleMoves(junctionIndex).length != children.length) {
+					System.err.println("Error at root, on junction.");
+					System.err.println("Number of children: " + children.length);
+					System.err.println("Should be: " + game.getPossibleMoves(junctionIndex).length);
+				}
+			} else {
+				// Check if the number of children match the possible options
+				if(game.getPossibleMoves(game.getPacmanCurrentNodeIndex()).length != children.length) {
+					System.err.println("Error at root, on edge.");
+					System.err.println("Number of children: " + children.length);
+					System.err.println("Should be: " + game.getPossibleMoves(game.getPacmanCurrentNodeIndex()).length);
+				}
+			}
+			//
+			for (MCTNode c : children) {
+				c.validate(game);
+			}
+		} else if(children != null) {
+			// Check if the number of children match the possible options -1 for reverse
+			if(game.getPossibleMoves(junctionIndex).length - 1 != children.length) {
+				System.err.println("Error at child, on junction.");
+				System.err.println("Number of children: " + children.length);
+				System.err.println("Should be: " + (game.getPossibleMoves(junctionIndex).length - 1));
+			}
+			//
+			for (MCTNode c : children) {
+				c.validate(game);
+			}
 		}
 	}
 
@@ -563,8 +606,8 @@ public abstract class MCTNode {
 	 * @param simulation
 	 *            The simulation-class to use for simulating the playout
 	 */
-	public MCTResult simulate(StrategySimulation simulation, int simCount, SelectionType selectionType,
-			int target, boolean strategic) {
+	public MCTResult simulate(StrategySimulation simulation, int simCount,
+			SelectionType selectionType, int target, boolean strategic) {
 		// Do a simulation starting at the root's game state
 		selectedNode = this;
 		pacLocations = new int[selectedNode.depth + 1];
@@ -583,8 +626,8 @@ public abstract class MCTNode {
 		Game interState = selectedNode.getGameState().copy();
 		DiscreteGame disGame = selectedNode.getdGame().copy();
 		//
-		return simulation
-				.playout(disGame, interState, moves, pacLocations, simCount, selectionType, strategic);
+		return simulation.playout(disGame, interState, moves, pacLocations, simCount,
+				selectionType, strategic);
 	}
 
 	@Override

@@ -242,7 +242,7 @@ public class Executor {
 		//
 		if (args[2].equals("pacepsilon")) {
 			writeOutput("pacepsilon");
-			for (double i = 0.0; i <= 1.001; i += 0.1) {
+			for (double i = 0.3; i <= 1.001; i += 0.1) {
 				pacman.setPacEpsilon(i);
 				writeOutput("Pac epsilon: " + i);
 				try {
@@ -254,7 +254,7 @@ public class Executor {
 		//
 		if (args[2].equals("ghostepsilon")) {
 			writeOutput("ghostepsilon");
-			for (double i = 0.0; i <= 1.001; i += 0.1) {
+			for (double i = 0.3; i <= 1.001; i += 0.1) {
 				pacman.setGhostEpsilon(i);
 				writeOutput("Ghost epsilon: " + i);
 				try {
@@ -266,8 +266,8 @@ public class Executor {
 		//
 		if (args[2].equals("pppenalty1")) {
 			writeOutput("pppenalty1");
-			for (double i = 0.0; i <= .5001; i += 0.1) {
-				for (double j = 0.0; j <= 1.001; j += 0.1) {
+			for (double i = 0.1; i <= .5001; i += 0.15) {
+				for (double j = 0.1; j <= 1.001; j += 0.15) {
 					writeOutput("Penalties: 1: " + i + " 2: " + j);
 					pacman.setPPPenalties(i, j);
 					try {
@@ -280,8 +280,8 @@ public class Executor {
 		//
 		if (args[2].equals("pppenalty2")) {
 			writeOutput("pppenalty2");
-			for (double i = 0.6; i <= 1.001; i += 0.1) {
-				for (double j = 0.0; j <= 1.001; j += 0.1) {
+			for (double i = 0.6; i <= 1.001; i += 0.15) {
+				for (double j = 0.1; j <= 1.001; j += 0.15) {
 					writeOutput("Penalties: 1: " + i + " 2: " + j);
 					pacman.setPPPenalties(i, j);
 					try {
@@ -330,9 +330,9 @@ public class Executor {
 		//
 		if (args[2].equals("ghostselect1")) {
 			writeOutput("ghostselect1");
-			for (double i = 0.0; i <= 0.3; i += 0.1) {
-				for (double j = 0.0; j <= 0.7; j += 0.1) {
-					for (double k = 0.0; k <= 0.7; k += 0.1) {
+			for (double i = 0.1; i <= 0.3; i += 0.1) {
+				for (double j = 0.1; j <= 0.7; j += 0.1) {
+					for (double k = 0.1; k <= 0.7; k += 0.1) {
 						writeOutput("Ghost select scores: default: " + i + " hard: " + j
 								+ " easy: " + k);
 						pacman.ghostSelectScore = i;
@@ -350,8 +350,8 @@ public class Executor {
 		if (args[2].equals("ghostselect2")) {
 			writeOutput("ghostselect2");
 			for (double i = 0.4; i <= 0.7; i += 0.1) {
-				for (double j = 0.0; j <= 0.7; j += 0.1) {
-					for (double k = 0.0; k <= 0.7; k += 0.1) {
+				for (double j = 0.1; j <= 0.7; j += 0.1) {
+					for (double k = 0.1; k <= 0.7; k += 0.1) {
 						writeOutput("Ghost select scores: default: " + i + " hard: " + j
 								+ " easy: " + k);
 						pacman.ghostSelectScore = i;
