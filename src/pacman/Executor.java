@@ -36,9 +36,11 @@ public class Executor {
 	 */
 	public static void main(String[] args) {
 		Executor exec = new Executor();
+		System.out.println("Ms PacMan started with " + args.length + " arguments.");
 		//
 		if (args.length == 0) {
-			exec.runGame(new MyPacMan(), new Legacy2TheReckoning(), true, Constants.DELAY);
+			MyPacMan pm = new MyPacMan();
+			exec.runGame(pm, new Legacy2TheReckoning(), true, Constants.DELAY);
 			return;
 		} else if (args[0].equals("?")) {
 			System.out.println("Usage: \n java -jar MsPacMan.jar <output file> <numTrials> <test>");
@@ -46,8 +48,10 @@ public class Executor {
 		}
 		//
 		int numTrials = Integer.parseInt(args[1]);
+		System.out.println("Running " + numTrials + " games");
 		//
 		outFile = args[0];
+		System.out.println("Output goes to: " + outFile);
 		try {
 			logFile = new FileWriter(outFile, true);
 			out = new PrintWriter(outFile);
@@ -59,101 +63,307 @@ public class Executor {
 		Controller<EnumMap<GHOST, MOVE>> ghosts = new Legacy2TheReckoning();
 		MyPacMan pacman = new MyPacMan();
 		//
-		if (args[2].equals("alpha_ps")) {
-			writeOutput("alpha_ps");
-			for (double u = .0; u <= 1.; u += .1) {
+		if (args[2].equals("alpha1")) {
+			writeOutput("alpha1");
+			for (double u = .0; u <= .5001; u += .1) {
 				writeOutput(":: Alpha_ps: " + u);
 				pacman.setAlpha_ps(u);
-				exec.runExperiment(pacman, ghosts, numTrials);
+				for (double v = .0; v <= 1.; v += .1) {
+					writeOutput(":: Alpha_g: " + v);
+					pacman.setAlpha_g(v);
+					try {
+						exec.runExperiment(pacman, ghosts, numTrials, false);
+					} catch (Exception ex) {
+					}
+				}
 			}
 		}
-		//
-		if (args[2].equals("alpha_g")) {
-			writeOutput("alpha_g");
-			for (double u = .0; u <= 1.; u += .1) {
-				writeOutput(":: Alpha_g: " + u);
-				pacman.setAlpha_g(u);
-				exec.runExperiment(pacman, ghosts, numTrials);
+		if (args[2].equals("alpha2")) {
+			writeOutput("alpha2");
+			for (double u = .5; u <= 1.001; u += .1) {
+				writeOutput(":: Alpha_ps: " + u);
+				pacman.setAlpha_ps(u);
+				for (double v = .0; v <= 1.; v += .1) {
+					writeOutput(":: Alpha_g: " + v);
+					pacman.setAlpha_g(v);
+					try {
+						exec.runExperiment(pacman, ghosts, numTrials, false);
+					} catch (Exception ex) {
+					}
+				}
 			}
 		}
 		//
 		if (args[2].equals("uct")) {
 			writeOutput("UCT Constant");
-			for (double u = .1; u <= 2.; u += .2) {
+			for (double u = .0; u <= 1.2; u += .15) {
 				writeOutput(":: UCT Constant: " + u);
 				pacman.setUCTC(u);
-				exec.runExperiment(pacman, ghosts, numTrials);
+				try {
+					exec.runExperiment(pacman, ghosts, numTrials, false);
+				} catch (Exception ex) {
+				}
 			}
 		}
 		//
-		if (args[2].equals("gamma")) {
+		if (args[2].equalsIgnoreCase("gamma")) {
 			writeOutput("gamma");
 			for (double u = .0; u <= 1.; u += .1) {
+				System.out.println(":: Decay factor gamma: " + u);
 				writeOutput(":: Decay factor gamma: " + u);
 				pacman.setGamma(u);
-				exec.runExperiment(pacman, ghosts, numTrials);
+				try {
+					exec.runExperiment(pacman, ghosts, numTrials, false);
+				} catch (Exception ex) {
+				}
 			}
 		}
 		//
-		if (args[2].equals("path")) {
+		if (args[2].equals("path1")) {
 			writeOutput("path");
-			for (int u = 10; u <= 100; u += 10) {
-				writeOutput(":: Max path length: " + u);
+			for (int u = 10; u <= 50; u += 10) {
+				writeOutput(":: :: Max path length: " + u);
 				pacman.maxPathLength = u;
-				exec.runExperiment(pacman, ghosts, numTrials);
+				for (int i = 20; i <= 85; i += 15) {
+					writeOutput(":: :: Max simulations : " + i);
+					pacman.maxSimulations = i;
+					try {
+						exec.runExperiment(pacman, ghosts, numTrials, false);
+					} catch (Exception ex) {
+					}
+				}
 			}
 		}
 		//
-		if (args[2].equals("simulations")) {
-			writeOutput("simulations");
-			for (int u = 80; u <= 250; u += 20) {
-				writeOutput(":: Max simulations : " + u);
-				pacman.maxSimulations = u;
-				exec.runExperiment(pacman, ghosts, numTrials);
+		if (args[2].equals("path2")) {
+			writeOutput("path");
+			for (int u = 60; u <= 100; u += 10) {
+				writeOutput(":: :: Max path length: " + u);
+				pacman.maxPathLength = u;
+				for (int i = 20; i <= 85; i += 15) {
+					writeOutput(":: :: Max simulations : " + i);
+					pacman.maxSimulations = i;
+					try {
+						exec.runExperiment(pacman, ghosts, numTrials, false);
+					} catch (Exception ex) {
+					}
+				}
 			}
 		}
-		// reuse = true, decay = true, var_depth = true, strategic_playout = true;
 		//
 		if (args[2].equals("reuse")) {
 			writeOutput("no reuse");
 			pacman.reuse = false;
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
 		}
 		//
 		if (args[2].equals("decay")) {
 			writeOutput("no decay");
 			pacman.decay = false;
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
 		}
 		//
 		if (args[2].equals("var_depth")) {
 			writeOutput("fixed depth");
 			pacman.var_depth = false;
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
 		}
 		//
 		if (args[2].equals("strat_playout")) {
 			writeOutput("no strategic playout");
 			pacman.strategic_playout = false;
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
 		}
 		//
 		if (args[2].equals("eiisolver")) {
 			writeOutput("eiisolver");
 			ghosts = new pacman.opponents.Ghosts.eiisolver.MyGhosts();
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
 		}
 		//
 		if (args[2].equals("ghostbuster")) {
 			writeOutput("ghostbuster");
 			ghosts = new pacman.opponents.Ghosts.ghostbuster.MyGhosts();
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
 		}
 		//
 		if (args[2].equals("memetix")) {
 			writeOutput("memetix");
 			ghosts = new pacman.opponents.Ghosts.memetix.MyGhosts();
-			exec.runExperiment(pacman, ghosts, numTrials);
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
+		}
+		//
+		if (args[2].equals("legacy")) {
+			writeOutput("legacy");
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
+		}
+		//
+		if (args[2].equals("lgc")) {
+			writeOutput("no lgc");
+			pacman.disableLGC();
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
+		}
+		//
+		if (args[2].equals("trailghost")) {
+			writeOutput("trailghost");
+			pacman.enableTrailGhost();
+			try {
+				exec.runExperiment(pacman, ghosts, numTrials, true);
+			} catch (Exception ex) {
+			}
+		}
+		//
+		if (args[2].equals("pacepsilon")) {
+			writeOutput("pacepsilon");
+			for (double i = 0.0; i <= 1.001; i += 0.1) {
+				pacman.setPacEpsilon(i);
+				writeOutput("Pac epsilon: " + i);
+				try {
+					exec.runExperiment(pacman, ghosts, numTrials, false);
+				} catch (Exception ex) {
+				}
+			}
+		}
+		//
+		if (args[2].equals("ghostepsilon")) {
+			writeOutput("ghostepsilon");
+			for (double i = 0.0; i <= 1.001; i += 0.1) {
+				pacman.setGhostEpsilon(i);
+				writeOutput("Ghost epsilon: " + i);
+				try {
+					exec.runExperiment(pacman, ghosts, numTrials, false);
+				} catch (Exception ex) {
+				}
+			}
+		}
+		//
+		if (args[2].equals("pppenalty1")) {
+			writeOutput("pppenalty1");
+			for (double i = 0.0; i <= .5001; i += 0.1) {
+				for (double j = 0.0; j <= 1.001; j += 0.1) {
+					writeOutput("Penalties: 1: " + i + " 2: " + j);
+					pacman.setPPPenalties(i, j);
+					try {
+						exec.runExperiment(pacman, ghosts, numTrials, false);
+					} catch (Exception ex) {
+					}
+				}
+			}
+		}
+		//
+		if (args[2].equals("pppenalty2")) {
+			writeOutput("pppenalty2");
+			for (double i = 0.6; i <= 1.001; i += 0.1) {
+				for (double j = 0.0; j <= 1.001; j += 0.1) {
+					writeOutput("Penalties: 1: " + i + " 2: " + j);
+					pacman.setPPPenalties(i, j);
+					try {
+						exec.runExperiment(pacman, ghosts, numTrials, false);
+					} catch (Exception ex) {
+					}
+				}
+			}
+		}
+		//
+		if (args[2].equals("safety1")) {
+			writeOutput("safety1");
+			for (double i = 0.5; i <= .7; i += 0.05) {
+				for (double j = 0.5; j <= .9; j += 0.05) {
+					for (double k = 0.5; k <= .9; k += 0.05) {
+						writeOutput("Safety: default: " + i + " hard: " + j + " easy: " + k);
+						pacman.safetyT = i;
+						pacman.hardSafetyT = j;
+						pacman.easySafetyT = k;
+						try {
+							exec.runExperiment(pacman, ghosts, numTrials, false);
+						} catch (Exception ex) {
+						}
+					}
+				}
+			}
+		}
+		//
+		if (args[2].equals("safety2")) {
+			writeOutput("safety2");
+			for (double i = 0.75; i <= .9; i += 0.05) {
+				for (double j = 0.5; j <= .9; j += 0.05) {
+					for (double k = 0.5; k <= .9; k += 0.05) {
+						writeOutput("Safety: default: " + i + " hard: " + j + " easy: " + k);
+						pacman.safetyT = i;
+						pacman.hardSafetyT = j;
+						pacman.easySafetyT = k;
+						try {
+							exec.runExperiment(pacman, ghosts, numTrials, false);
+						} catch (Exception ex) {
+						}
+					}
+				}
+			}
+		}
+		//
+		if (args[2].equals("ghostselect1")) {
+			writeOutput("ghostselect1");
+			for (double i = 0.0; i <= 0.3; i += 0.1) {
+				for (double j = 0.0; j <= 0.7; j += 0.1) {
+					for (double k = 0.0; k <= 0.7; k += 0.1) {
+						writeOutput("Ghost select scores: default: " + i + " hard: " + j
+								+ " easy: " + k);
+						pacman.ghostSelectScore = i;
+						pacman.hardGhostSelectScore = j;
+						pacman.easyGhostSelectScore = k;
+						try {
+							exec.runExperiment(pacman, ghosts, numTrials, false);
+						} catch (Exception ex) {
+						}
+					}
+				}
+			}
+		}
+		//
+		if (args[2].equals("ghostselect2")) {
+			writeOutput("ghostselect2");
+			for (double i = 0.4; i <= 0.7; i += 0.1) {
+				for (double j = 0.0; j <= 0.7; j += 0.1) {
+					for (double k = 0.0; k <= 0.7; k += 0.1) {
+						writeOutput("Ghost select scores: default: " + i + " hard: " + j
+								+ " easy: " + k);
+						pacman.ghostSelectScore = i;
+						pacman.hardGhostSelectScore = j;
+						pacman.easyGhostSelectScore = k;
+						try {
+							exec.runExperiment(pacman, ghosts, numTrials, false);
+						} catch (Exception ex) {
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -171,7 +381,7 @@ public class Executor {
 	}
 
 	public void runExperiment(Controller<MOVE> pacManController,
-			Controller<EnumMap<GHOST, MOVE>> ghostController, int trials) {
+			Controller<EnumMap<GHOST, MOVE>> ghostController, int trials, boolean printall) {
 		double avgScore = 0, maxScore = 0, minScore = Double.POSITIVE_INFINITY, S;
 		int[] values = new int[trials];
 		long due;
@@ -181,23 +391,28 @@ public class Executor {
 		//
 		int i = 0, realTrials = 0, avgLives = 0, avgMaze = 0;
 		writeOutput(":: Running " + trials + " games");
-		writeOutput("Score \t Lives \t Final level");
+		if (printall)
+			writeOutput("Score \t Lives \t Final level");
 		//
 		for (i = 0; i < trials; i++) {
 			game = new Game(rnd.nextLong());
 			//
-//			try {
-				while (!game.gameOver()) {
+
+			while (!game.gameOver()) {
+				try {
 					game.advanceGame(pacManController.getMove(game.copy(),
 							System.currentTimeMillis() + DELAY), ghostController.getMove(
 							game.copy(), System.currentTimeMillis() + DELAY));
+				} catch (Exception ex) {
+					System.err.println("Error in move: " + ex.getMessage()
+							+ " this does not stop the game.");
+					ex.printStackTrace();
 				}
-//			} catch (Exception ex) {
-//				System.err.println("Exception caught, running next game. " + ex.getMessage());
-//			}
+			}
 
-			writeOutput(game.getScore() + "\t" + game.getPacmanNumberOfLivesRemaining() + "\t"
-					+ game.getCurrentLevel());
+			if (printall)
+				writeOutput(game.getScore() + "\t" + game.getPacmanNumberOfLivesRemaining() + "\t"
+						+ game.getCurrentLevel());
 
 			if (game.getScore() < minScore) {
 				minScore = game.getScore();

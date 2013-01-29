@@ -31,9 +31,12 @@ public class StrategySimulation {
 	// !DEBUG
 	//
 	public static int minSteps = 1;
-	public static double pillPower = 1.3;
+	public static double pillPower = 1.2;
 	public static boolean trailGhost = false;
-	public static double sminGhostNorm = .5, sdecreasedMinGhostNorm = .4, easyMinGhostNorm = .6;
+	public static double sminGhostNorm = .4, hardMinGhostNorm = .3, easyMinGhostNorm = .5;
+	//
+	public double pp_penalty1 = .2, pp_penalty2 = .1;
+	public boolean last_good_config = true;
 	//
 	private GhostMoveGenerator ghostMover;
 	private PacManMoveGenerator pacManMover;
@@ -57,8 +60,7 @@ public class StrategySimulation {
 	//
 	private int mazeBefore, pwrPillsBefore, currentEdgesVisited;
 	private boolean died, targetReached, atePower, ateGhost, illegalPP;
-	private boolean[] ghostVector = new boolean[Constants.NUM_GHOSTS],
-			ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
+	private boolean[] ghostVector = new boolean[Constants.NUM_GHOSTS];
 	private int[] edibleTimes = new int[Constants.NUM_GHOSTS];
 	private MOVE pacMove, lastMove;
 	//
@@ -73,7 +75,7 @@ public class StrategySimulation {
 	}
 
 	public void setDecreasedMinGhostNorm() {
-		this.minGhostNorm = StrategySimulation.sdecreasedMinGhostNorm;
+		this.minGhostNorm = StrategySimulation.hardMinGhostNorm;
 	}
 
 	public void setEasyMinGhostNorm() {
@@ -87,7 +89,8 @@ public class StrategySimulation {
 		return treePhase;
 	}
 
-	boolean[] ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS];
+	boolean[] ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS],
+			ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
 	int[] ghostJunctions = new int[Constants.NUM_GHOSTS];
 	private EnumMap<GHOST, MOVE> ghostMoves = new EnumMap<GHOST, MOVE>(GHOST.class);
 
@@ -97,13 +100,18 @@ public class StrategySimulation {
 	private void advanceGame() {
 		// Store the edible time for each edible ghost.
 		for (GHOST g : GHOST.values()) {
-			// Reset ghosts that were at initial index
+			// Reset ghosts that were at initial index before the last move
 			if (ghostsAtInitial[g.ordinal()]) {
 				dGame.setGhostEdgeToInitial(g.ordinal(), gameState.getGhostLastMoveMade(g));
 			}
 			// Remember the decisions that ghosts made at junctions
-			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)) {
-				dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
+			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)
+					&& gameState.getTimeOfLastGlobalReversal() != (gameState.getTotalTime() - 1)) {
+				try {
+					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
+				} catch (Exception ex) {
+					// System.err.println("Ghost on wrong edge in simulation.");
+				}
 			}
 			// Reset the ghost statuses
 			if (gameState.isJunction(gameState.getGhostCurrentNodeIndex(g))) {
@@ -112,7 +120,7 @@ public class StrategySimulation {
 			} else {
 				ghostsAtJunctions[g.ordinal()] = false;
 			}
-			// Check if any ghosts are at the initial ghost-index
+			// Check if any ghosts are at the initial ghost-index ( for next move )
 			if (gameState.getGhostCurrentNodeIndex(g) == gameState.getGhostInitialNodeIndex()) {
 				ghostsAtInitial[g.ordinal()] = true;
 			} else {
@@ -123,20 +131,19 @@ public class StrategySimulation {
 				edibleTimes[g.ordinal()] = gameState.getGhostEdibleTime(g);
 			}
 		}
-		ghostMoves.clear();
-		//
-		if (!followingPath) { // If this is the case, pacmove is predetermined
-			pacMove = pacManMover.generatePacManMove(selectionType);
-		}
 		//
 		lastMove = gameState.getPacmanLastMoveMade();
 		currentEdgesVisited = dGame.getVisitedEdgeCount();
+		// Generate moves for pacman and the ghosts
+		ghostMoves.clear();
 		ghostMoves = ghostMover.generateGhostMoves();
+		if (!followingPath) { // If this is the case, pacmove is predetermined
+			pacMove = pacManMover.generatePacManMove(selectionType);
+		}
 		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMoves);
 
 		// Check if pacman died this turn
 		died = gameState.wasPacManEaten();
-		//
 		if (died)
 			return;
 		// Check if the next maze was reached
@@ -146,18 +153,6 @@ public class StrategySimulation {
 		// Check if ghosts reversed
 		if (gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)) {
 			dGame.reverseGhosts();
-		}
-		//
-		if (gameState.isJunction(pacLocation)) {
-			//
-			dGame.pacMove(pacLocation, pacMove);
-		} else if (lastMove == pacMove.opposite() || lastMove.opposite() == pacMove) {
-			// Pacman reversed on the current edge
-			dGame.reversePacMan();
-		} else {
-			// Increase the time pacman has spent on the current edge,
-			// this is used for distance measurements.
-			dGame.increaseTimeCurrentEdge();
 		}
 		//
 		// if (gv != null) {
@@ -170,11 +165,9 @@ public class StrategySimulation {
 		// gv.repaint();
 		// }
 		//
-		pacLocation = gameState.getPacmanCurrentNodeIndex();
 		//
 		if (gameState.wasPillEaten()) {
 			dGame.eatPill();
-			// pillsEaten += Math.pow(.999, maxSimulations);
 			pillsEaten++;
 			// Check if the edge is cleared.
 			if (dGame.getVisitedEdgeCount() > currentEdgesVisited) {
@@ -203,12 +196,25 @@ public class StrategySimulation {
 			// Further OK!
 			atePower = true;
 		}
+		//
+		if (gameState.isJunction(pacLocation)) {
+			try {
+				dGame.pacMove(pacLocation, pacMove);
+			} catch (Exception ex) {
+				System.err.println("Pacman on wrong edge in simulation.");
+			}
+		} else if (lastMove == pacMove.opposite() || lastMove.opposite() == pacMove) {
+			// Pacman reversed on the current edge
+			dGame.reversePacMan();
+		} else {
+			// Increase the time pacman has spent on the current edge, this is used for distance measurements.
+			dGame.increaseTimeCurrentEdge();
+		}
+		pacLocation = gameState.getPacmanCurrentNodeIndex();
 	}
 
 	/**
-	 * Determines if pacman is trapped in the current path.
-	 * 
-	 * @return
+	 * Determines if pacman is trapped in the current corridor.
 	 */
 	private boolean pacManTrapped() {
 		frontBlocked = false;
@@ -267,21 +273,25 @@ public class StrategySimulation {
 			int[] pacLocations, int maxSims, SelectionType selectionType, boolean strategic) {
 		//
 		this.selectionType = selectionType;
-		this.gameState = state;
-		this.dGame = discreteGame;
-		this.maxSimulations = maxSims;
+		gameState = state;
+		dGame = discreteGame;
+		maxSimulations = maxSims;
 		ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS];
+		ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
 		ghostJunctions = new int[Constants.NUM_GHOSTS];
 		ghostMoves.clear();
 		gameCount++;
-		// debugGameState = null;
-		// debugDGameState = null;
+		//
 		tempDGame = null;
 		tempGame = null;
 
+		// TODO DEBUG
+		// debugGameState = null;
+		// debugDGameState = null;
 		// if (XSRandom.r.nextInt(1000) <= 2) {
 		// gv = new GameView(gameState).showGame();
 		// }
+
 		pacLocation = gameState.getPacmanCurrentNodeIndex();
 		if (strategic) {
 			ghostMover = new PinchGhostMover(gameState, dGame);
@@ -291,15 +301,20 @@ public class StrategySimulation {
 
 		// Set the targets for the ghosts
 		if (trailGhost) {
-			if (!lastGoodTG)
+			
+			if (!lastGoodTG || !last_good_config) {
 				lastGoodTrailGhost = XSRandom.r.nextInt(Constants.NUM_GHOSTS);
+			}
+			
 			((PinchGhostMover) ghostMover).setTrailGhost(lastGoodTrailGhost);
 		} else {
-			if (!lastGoodTv) {
+			
+			if (!lastGoodTv || !last_good_config) {
 				for (int i = 0; i < Constants.NUM_GHOSTS; i++) {
 					ghostVector[i] = XSRandom.r.nextBoolean();
 				}
 			}
+			
 			((PinchGhostMover) ghostMover).setTargetVector(ghostVector);
 		}
 		//
@@ -314,13 +329,13 @@ public class StrategySimulation {
 		pwrPillsBefore = gameState.getNumberOfActivePowerPills();
 
 		// Reset the scoring values
-		nextMaze = false;
 		pillsEaten = 0;
 		edgePillsEaten = 0;
 		tempPills = 0;
 		tempGhosts = 0;
 		tempMaxSim = 0;
 		ghostsEaten = 0;
+		nextMaze = false;
 		ateGhost = false;
 		atePower = false;
 		illegalPP = false;
@@ -337,13 +352,8 @@ public class StrategySimulation {
 			// Execute the first path-move to determine a direction
 			pacMove = pathMoves[i];
 			//
-			try {
-				advanceGame();
-				treePhase++;
-			} catch (Exception e) {
-				System.err.println("Nullpointer :(");
-				break;
-			}
+			advanceGame();
+			treePhase++;
 			maxSimulations--;
 			//
 			if (died || nextMaze || ateGhost || atePower || illegalPP) {
@@ -385,8 +395,6 @@ public class StrategySimulation {
 				if (died || nextMaze || ateGhost || atePower || illegalPP) {
 					break;
 				}
-				// clearedEdgeOnPath = edgeCleared;
-				//
 			}
 			//
 			if (died || nextMaze || ateGhost || atePower || illegalPP) {
@@ -473,7 +481,6 @@ public class StrategySimulation {
 		//
 		pillNorm = .0;
 		ghostNorm = .0;
-
 		// Determine the pill-score
 		if (targetReached && targetSelection || pillsBefore == 0
 				|| (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT)) {
@@ -486,7 +493,7 @@ public class StrategySimulation {
 		}
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
-			//
+			// Mathemagics!!
 			double ghostDivisor = Constants.NUM_GHOSTS
 					* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
 							gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
@@ -495,15 +502,15 @@ public class StrategySimulation {
 			if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()
 					&& ghostNorm < minGhostNorm) {
 				// Penalty is a lower pill score when pp was eaten, but not enough ghosts
-				pillNorm /= 5.;
-				ghostNorm /= 5.;
+				pillNorm *= pp_penalty1;
+				ghostNorm *= pp_penalty1;
 			}
 			// else {
 			// pillNorm += (ghostNorm * .4);
 			// }
 		} else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
 			// Penalty is a lower pill score when pp was eaten, but no ghosts
-			pillNorm /= 10.;
+			pillNorm *= pp_penalty2;
 		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
 	}

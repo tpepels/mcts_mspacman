@@ -19,8 +19,7 @@ public class DiscreteGame {
 	/**
 	 * Creates a graph from the current maze
 	 * 
-	 * @param gameState
-	 *            The game state of the current game
+	 * @param gameState The game state of the current game
 	 * @return The current maze graph
 	 */
 	private static Edge[][] createGraph(Game gameState) {
@@ -205,6 +204,7 @@ public class DiscreteGame {
 	}
 
 	public void eatPill() {
+		try {
 		if (currentPacManEdge != null) {
 			if (!pacmanEdgesVisited[currentPacManEdge.uniqueId]) {
 				int maxPills = currentEdges[currentMaze][currentPacManEdge.uniqueId].pillCount;
@@ -218,6 +218,9 @@ public class DiscreteGame {
 					setEdgeVisited(currentPacManEdge.uniqueId);
 				}
 			}
+		}
+		} catch (Exception ex) {
+			
 		}
 	}
 
@@ -478,7 +481,7 @@ public class DiscreteGame {
 		ghostMoves[ghost] = move;
 		ghostJunctions[ghost] = junction;
 		//
-		try {
+//		try {
 			Edge edge = getGraph()[junction][move.ordinal()];
 			ghostEdges[ghost] = edge.uniqueId;
 			//
@@ -486,10 +489,10 @@ public class DiscreteGame {
 			if (ghostHeadings[ghost] == junction) {
 				ghostHeadings[ghost] = edge.nodes[0];
 			}
-		} catch (Exception ex) {
-			System.err.println(String.format("GhostMove nullpointer, j: %d, m: %d, g: %d",
-					junction, move.ordinal(), ghost));
-		}
+//		} catch (Exception ex) {
+//			System.err.println(String.format("GhostMove nullpointer, j: %d, m: %d, g: %d",
+//					junction, move.ordinal(), ghost));
+//		}
 	}
 
 	public int[] getPillsEatenEdge() {

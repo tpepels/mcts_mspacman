@@ -14,7 +14,7 @@ import pacman.game.Game;
 public class PacManMover implements PacManMoveGenerator {
 	//
 	public static int ghostDistT = 6;
-	private final double epsilon = .8;
+	public static double epsilon = .8;
 	//
 	private MOVE[] safeMoves, safeMoves2, moves, pacMoves, directionsRev;
 	private Edge[] junction;
@@ -319,9 +319,13 @@ public class PacManMover implements PacManMoveGenerator {
 					return safeMoves2[j];
 				}
 				// Don't visit an edge twice unless it is unavoidable
-				if (dGame.getPacmanEdgeVisited(junction[safeMoves2[j].ordinal()].uniqueId)
-						|| safeMoves2[j] == reverse) {
-					continue;
+				try{
+					if (dGame.getPacmanEdgeVisited(junction[safeMoves2[j].ordinal()].uniqueId)
+							|| safeMoves2[j] == reverse) {
+						continue;
+					}
+				} catch (Exception e) {
+					// This sometimes goes wrong, no problem.
 				}
 
 				moves[m] = safeMoves2[j];

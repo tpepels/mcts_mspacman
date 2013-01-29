@@ -19,7 +19,7 @@ import pacman.game.Game;
 public class PinchGhostMover implements GhostMoveGenerator {
 
 	// The per-ghost probabilities of making a greedy move.
-	public static double greedyP = .8;
+	public static double epsilon = .8;
 	public static int pacDistT = 6;
 	private DiscreteGame dGame;
 	private int trailGhost = -1, current;
@@ -45,7 +45,7 @@ public class PinchGhostMover implements GhostMoveGenerator {
 		this.dGame = dGame;
 		this.graph = dGame.getGraph();
 	}
-	
+
 	@Override
 	public EnumMap<GHOST, MOVE> generateGhostMoves() {
 		ghostMoves.clear();
@@ -59,9 +59,7 @@ public class PinchGhostMover implements GhostMoveGenerator {
 			pacFront = pacRear;
 			pacRear = dGame.getPacHeading();
 		}
-
 		boolean actionRequired = false;
-
 		for (GHOST g : GHOST.values()) {
 			current = gameState.getGhostCurrentNodeIndex(g);
 			dirs = gameState.getPossibleMoves(current, gameState.getGhostLastMoveMade(g));
@@ -76,14 +74,14 @@ public class PinchGhostMover implements GhostMoveGenerator {
 		}
 
 		if (pacRear < 1 || pacFront < 1) {
-			// The rear and front of pacman are not yet known, make random
-			// moves.
+			// The rear and front of pacman are not yet known, make random moves.
 			for (GHOST g : GHOST.values()) {
 				if (gameState.doesGhostRequireAction(g)) {
-					current = gameState.getGhostCurrentNodeIndex(g);
-					dirs = gameState.getPossibleMoves(current, gameState.getGhostLastMoveMade(g));
-					MOVE move = dirs[XSRandom.r.nextInt(dirs.length)];
-					ghostMoves.put(g, move);
+					try {
+						ghostMoves.put(g, getRandomMoveToTarget(g, pacLoc));
+					} catch (Exception ex) {
+						// Fails sometimes :(
+					}
 				}
 			}
 			// Return the random moves.
@@ -91,42 +89,34 @@ public class PinchGhostMover implements GhostMoveGenerator {
 		}
 		//
 		if (dGame.getCurrentPacmanEdge() != null) {
-			if (dGame.isPacmanReversed()) {
-				// pacRearDist = dGame.pacManDistanceToHeading() + 1;
-				pacFrontDist = dGame.pacManDistanceToRear() + 1;
-			} else {
-				pacFrontDist = dGame.pacManDistanceToHeading() + 1;
-				// pacRearDist = dGame.pacManDistanceToRear() + 1;
-			}
+			pacFrontDist = dGame.pacManDistanceToHeading() + 1;
 		} else {
 			pacFrontDist = 0;
-			// pacRearDist = 0;
 		}
 		//
 		for (GHOST g : GHOST.values()) {
 			current = gameState.getGhostCurrentNodeIndex(g);
 			lastMove = gameState.getGhostLastMoveMade(g);
 			dirs = gameState.getPossibleMoves(current, lastMove);
+			//
 			if (dirs.length > 1) {
-				//
-				pacDistance = gameState.getShortestPathDistance(current, pacLoc, lastMove)
-						- Constants.EAT_DISTANCE;
 				boolean pacClose = false;
 				MOVE move = MOVE.NEUTRAL;
 				// Check if this ghost can make a killing move
 				if (!gameState.isGhostEdible(g) && gameState.isJunction(current)) {
 					//
 					for (int j = 0; j < dirs.length; j++) {
+						// This move makes it impossible for Pacman to choose a new direction
 						if (pacManTrapped(g, current, dirs[j])) {
-							// This move makes it impossible for Pacman to
-							// choose a new direction
 							// System.out.println(g + " " + dirs[j] + " TRAP");
 							move = dirs[j];
 							pacClose = true;
 							break;
 						}
 					}
-					//
+					pacDistance = gameState.getShortestPathDistance(current, pacLoc, lastMove)
+							- Constants.EAT_DISTANCE;
+					// Pac-Man is very close to the ghost, move to pacs direction
 					if (pacDistance <= pacDistT && !pacClose) {
 						move = gameState.getApproximateNextMoveTowardsTarget(current, pacLoc,
 								lastMove, DM.PATH);
@@ -137,13 +127,15 @@ public class PinchGhostMover implements GhostMoveGenerator {
 					}
 					//
 					if (!pacClose && g.ordinal() == trailGhost || targetVector[g.ordinal()]) {
-						//
+						// Ghost is at the junction at the rear of pacman
 						if (current == pacRear) {
+							// Move in the direction of the edge that pacman is on
 							for (int j = 0; j < dirs.length; j++) {
 								if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j]
 										.ordinal()].uniqueId) {
 									// System.out.println(g + " " + dirs[j] + " AT PAC REAR");
 									move = dirs[j];
+									// If another ghost is already on the path, ignore and continue
 									if (!isDoubleMove(g, move)) {
 										pacClose = true;
 									}
@@ -153,9 +145,9 @@ public class PinchGhostMover implements GhostMoveGenerator {
 						}
 					} else if (current == pacFront) {
 						for (int j = 0; j < dirs.length; j++) {
+							// Junction in front of pacman, try to block it off
 							if (dGame.getCurrentPacmanEdgeId() == graph[current][dirs[j].ordinal()].uniqueId) {
 								// System.out.println(g + " " + dirs[j] + " AT PAC FRONT");
-
 								move = dirs[j];
 								if (!isDoubleMove(g, move)) {
 									pacClose = true;
@@ -166,21 +158,19 @@ public class PinchGhostMover implements GhostMoveGenerator {
 					}
 				}
 				//
-				if (!pacClose && XSRandom.r.nextDouble() < greedyP) {
+				if (!pacClose && XSRandom.r.nextDouble() < epsilon) {
 					if (gameState.isGhostEdible(g)) {
-						// Edible == run away!.
+						// Edible => run away!.
 						move = gameState.getApproximateNextMoveAwayFromTarget(current, pacLoc,
 								lastMove, DM.PATH);
 						move = getNonDoubleMove(g, move);
 						// System.out.println(g + " " + move + " EDIBLE");
 					} else {
-
 						// Try to corner the pacman by moving to its front or rear
 						if (g.ordinal() == trailGhost || targetVector[g.ordinal()]) {
 							// Get closer to the rear position of pacman
 							move = gameState.getApproximateNextMoveTowardsTarget(current, pacRear,
 									lastMove, DM.PATH);
-
 						} else {
 							if (gameState.isJunction(current)) {
 								// Try to block off the front of pacman
@@ -274,11 +264,9 @@ public class PinchGhostMover implements GhostMoveGenerator {
 		boolean edible = gameState.isGhostEdible(g);
 		MOVE forbiddenMove = MOVE.NEUTRAL;
 		if (edible) {
-
 			forbiddenMove = gameState.getApproximateNextMoveTowardsTarget(current, location,
 					lastMove, DM.PATH);
 		} else {
-
 			forbiddenMove = gameState.getApproximateNextMoveAwayFromTarget(current, location,
 					lastMove, DM.PATH);
 		}
