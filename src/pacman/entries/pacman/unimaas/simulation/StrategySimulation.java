@@ -141,7 +141,7 @@ public class StrategySimulation {
 		if (!followingPath) { // If this is the case, pacmove is predetermined
 			pacMove = pacManMover.generatePacManMove(selectionType);
 		}
-		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMoves);
+		gameState.advanceGame(pacMove, ghostMoves);
 
 		// Check if pacman died this turn
 		died = gameState.wasPacManEaten();
