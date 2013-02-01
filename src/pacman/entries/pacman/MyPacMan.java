@@ -1,6 +1,7 @@
 package pacman.entries.pacman;
 
 import pacman.controllers.Controller;
+import pacman.entries.pacman.unimaas.Settings;
 import pacman.entries.pacman.unimaas.SinglePlayerNode;
 import pacman.entries.pacman.unimaas.framework.*;
 import pacman.entries.pacman.unimaas.ghosts.PinchGhostMover;
@@ -15,29 +16,37 @@ import pacman.game.Constants.*;
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
 	private final boolean DEBUG = false;
+
 	// To use different simulation strategy or selection, set them here.
 	private StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
+
 	// At this time, start eating ghosts a.s.a.p.
-	private final int endGameTime = Constants.MAX_TIME - 3000;
-	public int maxPathLength = 70, maxSimulations = 50;
-	// penalties and discounts
-	private double reversePenalty = .9; // The reward penalty for selecting a reverse move
-	private double discount = .7; // Decay factor for the tree decay
-	// Set some slacktime for the search to ensure on time return of move
-	private int slackTime = 2; // Slack on simulations
-	private final int finalSlackTime = 1; // Total slack time
+	// private final int endGameTime = Constants.MAX_TIME - 3000;
+	// Maximum length of a tree-path and maximum simulation steps in simulation phase
+	public int maxPathLength, maxSimulations;
 	// Safety and minimum ghost score parameters.
-	public double safetyT = .78, ghostSelectScore = .45;
-	public double hardSafetyT = .87, hardGhostSelectScore = .4;
-	public double easySafetyT = .74, easyGhostSelectScore = .55;
-	//
+	public double safetyT, ghostSelectScore;
+
+	// penalties and discounts
+	private double reversePenalty; // The reward penalty for selecting a reverse move
+	private double discount; // Decay factor for the tree decay
+
+	// Set some slacktime for the search to ensure on time return of move (For competition only)
+	// private int slackTime = 2, earlyCount = 0; // Slack on simulations
+	// private final int finalSlackTime = 1; // Total slack time
+
+	/* Competition only values
+	 * public double hardSafetyT = .87, hardGhostSelectScore = .4; public double easySafetyT = .74, easyGhostSelectScore
+	 * = .55; private int timesDiedInFirstMaze = 0;
+	 */
+
 	private boolean atJunction = false, prevLocationWasJunction = false;
 	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
 	private final int[] ghostJunctions = new int[4];
 	// Counters etc..
-	private int earlyCount = 0, lastJunction = -1, currentMaze = -1,
-			pacLives = Constants.NUM_LIVES, currentTarget = -1, timesDiedInFirstMaze = 0;
+	private int lastJunction = -1, currentMaze = -1,
+			pacLives = Constants.NUM_LIVES, currentTarget = -1;
 	private double prevMoveSurvivalRate = 0., simulations = 0;
 	private MOVE move, lastTurnMove, lastJunctionMove;
 	// Gamestate
@@ -51,16 +60,45 @@ public class MyPacMan extends Controller<MOVE> {
 	public boolean reuse = true, decay = true, var_depth = true, strategic_playout = true;
 	public int maxNodeDepth = 5; // For fixed node depth tests
 
+	public void loadSettings(Settings setting) {
+		maxPathLength = (int) setting.maxPathLength[0];
+		maxSimulations = (int) setting.maxSimulations[0];
+		//
+		safetyT = setting.safetyT[0];
+		ghostSelectScore = setting.ghostSelectScore[0];
+		reversePenalty = setting.reversePenalty[0];
+		discount = setting.discount[0];
+		//
+		UCTSelection.C = setting.uctC[0];
+		UCTSelection.minVisits = (int) setting.minVisits[0];
+		//
+		simulation.pp_penalty1 = setting.ppPenalty1[0];
+		simulation.pp_penalty2 = setting.ppPenalty2[0];
+		//
+		PacManMover.epsilon = setting.pacEpsilon[0];
+		PinchGhostMover.epsilon = setting.ghostEpsilon[0];
+		//
+		UCTSelection.alpha_ps = setting.alpha_pill[0];
+		UCTSelection.alpha_g = setting.alpha_ghosts[0];
+		//
+		StrategySimulation.trailGhost = setting.enable_trailghost;
+		simulation.last_good_config = setting.last_good_config;
+		reuse = setting.tree_reuse;
+		var_depth = setting.tree_var_depth;
+		strategic_playout = setting.strategic_playout;
+	}
+
 	@Override
 	public MOVE getMove(Game game, long timeDue) {
-		//
 		gameState = game;
 		updateDiscreteGamePreMove();
 		CauseOfDeath.reset();
 		setSelectionType();
 		setupTree();
 		// Run the simulations
-		runSimulations(timeDue - slackTime);
+		runSimulations(timeDue);
+		// Competition call
+		// runSimulations(timeDue - slackTime);
 		//
 		MCTNode selectedChild = null;
 		MCTNode[] children = root.getChildren();
@@ -121,21 +159,21 @@ public class MyPacMan extends Controller<MOVE> {
 			prevLocationWasJunction = false;
 		}
 		// This makes sure moves are always returned on time
-		if (System.currentTimeMillis() > (timeDue - finalSlackTime)
-				&& gameState.getCurrentLevelTime() > 10) {
-			// Don't add slacktime in the first few moves, it may explode and is not needed
-			slackTime++;
-		} else if (System.currentTimeMillis() < (timeDue - finalSlackTime)
-				&& gameState.getCurrentLevelTime() > 10) {
-			// Try to decrease the slacktime if possible
-			earlyCount++;
-			if (earlyCount >= 10) {
-				if (slackTime > 2) {
-					slackTime--;
-				}
-				earlyCount = 0;
-			}
-		}
+		// if (System.currentTimeMillis() > (timeDue - finalSlackTime)
+		// && gameState.getCurrentLevelTime() > 10) {
+		// // Don't add slacktime in the first few moves, it may explode and is not needed
+		// slackTime++;
+		// } else if (System.currentTimeMillis() < (timeDue - finalSlackTime)
+		// && gameState.getCurrentLevelTime() > 10) {
+		// // Try to decrease the slacktime if possible
+		// earlyCount++;
+		// if (earlyCount >= 10) {
+		// if (slackTime > 2) {
+		// slackTime--;
+		// }
+		// earlyCount = 0;
+		// }
+		// }
 		// root.validate(gameState);
 		//
 		return move;
@@ -435,43 +473,6 @@ public class MyPacMan extends Controller<MOVE> {
 			simulationNode.backPropagate(result, selectionType, simulation.getTreePhaseSteps());
 		}
 	}
-	
-	public void setAlpha_ps(double alpha) {
-		UCTSelection.alpha_ps = alpha;
-	}
-
-	public void setAlpha_g(double alpha) {
-		UCTSelection.alpha_g = alpha;
-	}
-
-	public void setUCTC(double UCTC) {
-		UCTSelection.C = UCTC;
-	}
-
-	public void setGamma(double gamma) {
-		discount = gamma;
-	}
-	
-	public void setPPPenalties(double penalty1, double penalty2) {
-		simulation.pp_penalty1 = penalty1;
-		simulation.pp_penalty2 = penalty2;
-	}
-	
-	public void disableLGC() {
-		simulation.last_good_config = false;
-	}
-	
-	public void enableTrailGhost() {
-		StrategySimulation.trailGhost = true;
-	}
-	
-	public void setPacEpsilon(double epsilon) {
-		PacManMover.epsilon = epsilon;
-	}
-	
-	public void setGhostEpsilon(double epsilon) {
-		PinchGhostMover.epsilon = epsilon;
-	}
 
 	/**
 	 * Sets the selection type based on the current state of the game.
@@ -509,11 +510,12 @@ public class MyPacMan extends Controller<MOVE> {
 		// First call should create a new discrete gamestate each game
 		if (gameState.getTotalTime() == 0 || dGame == null) {
 			dGame = new DiscreteGame(gameState);
-			timesDiedInFirstMaze = 0;
+			// timesDiedInFirstMaze = 0;
 		}
 		// Either the game just started or pacman entered a new maze
 		if (gameState.getMazeIndex() != currentMaze || gameState.getTotalTime() == 0) {
-			//System.out.println("Maze: " + gameState.getMazeIndex() + " pills: " + gameState.getNumberOfActivePills());
+			// System.out.println("Maze: " + gameState.getMazeIndex() + " pills: " +
+			// gameState.getNumberOfActivePills());
 			dGame.setCurrentMaze(gameState);
 			graph = dGame.getGraph();
 			//
@@ -530,11 +532,11 @@ public class MyPacMan extends Controller<MOVE> {
 			simulation.deathCount = 0.;
 		}
 		// For easier ghosts, all lives remain in third maze
-		if (gameState.getMazeIndex() == 3 && gameState.getPacmanNumberOfLivesRemaining() >= 2) {
-			ghostSelectScore = easyGhostSelectScore;
-			safetyT = easySafetyT;
-			simulation.setEasyMinGhostNorm();
-		}
+		// if (gameState.getMazeIndex() == 3 && gameState.getPacmanNumberOfLivesRemaining() >= 2) {
+		// ghostSelectScore = easyGhostSelectScore;
+		// safetyT = easySafetyT;
+		// simulation.setEasyMinGhostNorm();
+		// }
 
 		// Pacman died
 		if (gameState.wasPacManEaten()) {
@@ -547,14 +549,14 @@ public class MyPacMan extends Controller<MOVE> {
 			//
 			dGame.pacmanDied();
 			// When the opponent is strong, go for ghosts sooner.
-			if (gameState.getCurrentLevel() < 1) {
-				timesDiedInFirstMaze++;
-				if (timesDiedInFirstMaze == 1) {
-					ghostSelectScore = hardGhostSelectScore;
-					simulation.setDecreasedMinGhostNorm();
-					safetyT = hardSafetyT;
-				}
-			}
+			// if (gameState.getCurrentLevel() < 1) {
+			// timesDiedInFirstMaze++;
+			// if (timesDiedInFirstMaze == 1) {
+			// ghostSelectScore = hardGhostSelectScore;
+			// simulation.setDecreasedMinGhostNorm();
+			// safetyT = hardSafetyT;
+			// }
+			// }
 
 		} else if (pacLives < gameState.getPacmanNumberOfLivesRemaining()) {
 			// Pacman gained a life (happens after the first 10.000 points)
@@ -612,12 +614,13 @@ public class MyPacMan extends Controller<MOVE> {
 				ghostsAtInitial[g.ordinal()] = false;
 			}
 
-			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g) && 
-					gameState.getTimeOfLastGlobalReversal() != (gameState.getTotalTime() - 1)) {
+			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)
+					&& gameState.getTimeOfLastGlobalReversal() != (gameState.getTotalTime() - 1)) {
 				try {
-					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], gameState.getGhostLastMoveMade(g));
+					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()],
+							gameState.getGhostLastMoveMade(g));
 				} catch (Exception ex) {
-//					System.err.println("Ghost on wrong edge!");
+					// System.err.println("Ghost on wrong edge!");
 				}
 			}
 			// Reset the ghost statuses
@@ -628,10 +631,10 @@ public class MyPacMan extends Controller<MOVE> {
 				ghostsAtJunctions[g.ordinal()] = false;
 			}
 		}
-		// At the end of the game, make sure to eat as many ghosts as possible.
-		if (gameState.getTotalTime() >= endGameTime) {
-			ghostSelectScore = hardGhostSelectScore;
-			simulation.setDecreasedMinGhostNorm();
-		}
+		// // At the end of the game, make sure to eat as many ghosts as possible.
+		// if (gameState.getTotalTime() >= endGameTime) {
+		// ghostSelectScore = hardGhostSelectScore;
+		// simulation.setDecreasedMinGhostNorm();
+		// }
 	}
 }

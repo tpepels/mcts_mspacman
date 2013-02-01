@@ -7,14 +7,18 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Random;
 import pacman.controllers.*;
 import pacman.controllers.examples.Legacy2TheReckoning;
 import pacman.entries.pacman.MyPacMan;
+import pacman.entries.pacman.unimaas.Settings;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
 import pacman.game.Constants;
+import pacman.game.Constants.GHOST;
+import pacman.game.Constants.MOVE;
 import pacman.game.Game;
 import pacman.game.GameView;
 
@@ -28,27 +32,50 @@ import static pacman.game.Constants.*;
  */
 @SuppressWarnings("unused")
 public class Executor {
+	private static MyPacMan pacman = null;
+	private static Controller<EnumMap<GHOST, MOVE>> ghosts = null;
+	private static int numTrials = 0;
+	private static boolean printall = false;
+	private static Settings setting = null;
 	/**
 	 * The main method. Several options are listed - simply remove comments to use the option you want.
 	 * 
 	 * @param args
 	 *            the command line arguments
 	 */
+	@SuppressWarnings({ "unchecked" })
 	public static void main(String[] args) {
 		Executor exec = new Executor();
+
 		System.out.println("Ms PacMan started with " + args.length + " arguments.");
 		//
+		
 		if (args.length == 0) {
+			setting = Settings.getDefaultSetting();
 			MyPacMan pm = new MyPacMan();
+			pm.loadSettings(setting);
+			exec.runGame(pm, new Legacy2TheReckoning(), true, Constants.DELAY);
+			return;
+		} else if (args.length == 1) {
+			try {
+				setting = Settings.deserializeSettings(args[0]);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			MyPacMan pm = new MyPacMan();
+			pm.loadSettings(setting);
 			exec.runGame(pm, new Legacy2TheReckoning(), true, Constants.DELAY);
 			return;
 		} else if (args[0].equals("?")) {
-			System.out.println("Usage: \n java -jar MsPacMan.jar <output file> <numTrials> <test>");
+			System.out
+					.println("Usage: \n java -jar MsPacMan.jar <output file> <numTrials> <settings_file> <verbose>");
 			return;
 		}
 		//
-		int numTrials = Integer.parseInt(args[1]);
+		numTrials = Integer.parseInt(args[1]);
 		System.out.println("Running " + numTrials + " games");
+		printall = Boolean.parseBoolean(args[3]);
 		//
 		outFile = args[0];
 		System.out.println("Output goes to: " + outFile);
@@ -59,311 +86,58 @@ public class Executor {
 			e.printStackTrace();
 			return;
 		}
-		//
-		Controller<EnumMap<GHOST, MOVE>> ghosts = new Legacy2TheReckoning();
-		MyPacMan pacman = new MyPacMan();
-		//
-		if (args[2].equals("alpha1")) {
-			writeOutput("alpha1");
-			for (double u = .0; u <= .5001; u += .1) {
-				writeOutput(":: Alpha_ps: " + u);
-				pacman.setAlpha_ps(u);
-				for (double v = .0; v <= 1.; v += .1) {
-					writeOutput(":: Alpha_g: " + v);
-					pacman.setAlpha_g(v);
-					try {
-						exec.runExperiment(pacman, ghosts, numTrials, false);
-					} catch (Exception ex) {
-					}
+
+		try {
+			setting = Settings.deserializeSettings(args[2]);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		//		
+		try {
+			// Super safety ...
+			if ( setting.opponent.toLowerCase().equals("pacman.controllers.examples.legacy2thereckoning")
+					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.ghostbuster.myghosts")
+					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.memetix.myghost")
+					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.eiisolver.myghost")) {
+
+				ghosts = (Controller<EnumMap<GHOST, MOVE>>) Class.forName(setting.opponent)
+						.newInstance();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		pacman = new MyPacMan();
+		setting.setPropertiesList();
+		loopNextProperty(setting.properties, 0);
+	}
+
+	public static boolean loopNextProperty(ArrayList<double[]> properties, int index) {
+		// Check for the next property to loop over
+		while(index < properties.size() && properties.get(index).length <= 1) {
+			index++;
+		}
+		// Check if we're not at the end
+		if(index < properties.size()) {
+			double[] prop = properties.get(index);
+			// Needed to reset it later
+			double firstVal = prop[0];
+			String name = Settings.class.getFields()[index].getName();
+			for(int i = 0; i < prop.length; i++) {
+				// Always place the property to test at the start of the list
+				prop[0] = prop[i];
+				System.out.println(name + " value: " + prop[i]);
+				if(!loopNextProperty(properties, index + 1)) {
+					pacman.loadSettings(setting);
+					runExperiment(pacman, ghosts, numTrials, printall);
 				}
 			}
-		}
-		if (args[2].equals("alpha2")) {
-			writeOutput("alpha2");
-			for (double u = .5; u <= 1.001; u += .1) {
-				writeOutput(":: Alpha_ps: " + u);
-				pacman.setAlpha_ps(u);
-				for (double v = .0; v <= 1.; v += .1) {
-					writeOutput(":: Alpha_g: " + v);
-					pacman.setAlpha_g(v);
-					try {
-						exec.runExperiment(pacman, ghosts, numTrials, false);
-					} catch (Exception ex) {
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("uct")) {
-			writeOutput("UCT Constant");
-			for (double u = .0; u <= 1.2; u += .15) {
-				writeOutput(":: UCT Constant: " + u);
-				pacman.setUCTC(u);
-				try {
-					exec.runExperiment(pacman, ghosts, numTrials, false);
-				} catch (Exception ex) {
-				}
-			}
-		}
-		//
-		if (args[2].equalsIgnoreCase("gamma")) {
-			writeOutput("gamma");
-			for (double u = .0; u <= 1.; u += .1) {
-				System.out.println(":: Decay factor gamma: " + u);
-				writeOutput(":: Decay factor gamma: " + u);
-				pacman.setGamma(u);
-				try {
-					exec.runExperiment(pacman, ghosts, numTrials, false);
-				} catch (Exception ex) {
-				}
-			}
-		}
-		//
-		if (args[2].equals("path1")) {
-			writeOutput("path");
-			for (int u = 10; u <= 50; u += 10) {
-				writeOutput(":: :: Max path length: " + u);
-				pacman.maxPathLength = u;
-				for (int i = 20; i <= 85; i += 15) {
-					writeOutput(":: :: Max simulations : " + i);
-					pacman.maxSimulations = i;
-					try {
-						exec.runExperiment(pacman, ghosts, numTrials, false);
-					} catch (Exception ex) {
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("path2")) {
-			writeOutput("path");
-			for (int u = 60; u <= 100; u += 10) {
-				writeOutput(":: :: Max path length: " + u);
-				pacman.maxPathLength = u;
-				for (int i = 20; i <= 85; i += 15) {
-					writeOutput(":: :: Max simulations : " + i);
-					pacman.maxSimulations = i;
-					try {
-						exec.runExperiment(pacman, ghosts, numTrials, false);
-					} catch (Exception ex) {
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("reuse")) {
-			writeOutput("no reuse");
-			pacman.reuse = false;
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("decay")) {
-			writeOutput("no decay");
-			pacman.decay = false;
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("var_depth")) {
-			writeOutput("fixed depth");
-			pacman.var_depth = false;
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("strat_playout")) {
-			writeOutput("no strategic playout");
-			pacman.strategic_playout = false;
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("eiisolver")) {
-			writeOutput("eiisolver");
-			ghosts = new pacman.opponents.Ghosts.eiisolver.MyGhosts();
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("ghostbuster")) {
-			writeOutput("ghostbuster");
-			ghosts = new pacman.opponents.Ghosts.ghostbuster.MyGhosts();
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("memetix")) {
-			writeOutput("memetix");
-			ghosts = new pacman.opponents.Ghosts.memetix.MyGhosts();
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("legacy")) {
-			writeOutput("legacy");
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("lgc")) {
-			writeOutput("no lgc");
-			pacman.disableLGC();
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("trailghost")) {
-			writeOutput("trailghost");
-			pacman.enableTrailGhost();
-			try {
-				exec.runExperiment(pacman, ghosts, numTrials, true);
-			} catch (Exception ex) {
-			}
-		}
-		//
-		if (args[2].equals("pacepsilon")) {
-			writeOutput("pacepsilon");
-			for (double i = 0.3; i <= 1.001; i += 0.1) {
-				pacman.setPacEpsilon(i);
-				writeOutput("Pac epsilon: " + i);
-				try {
-					exec.runExperiment(pacman, ghosts, numTrials, false);
-				} catch (Exception ex) {
-				}
-			}
-		}
-		//
-		if (args[2].equals("ghostepsilon")) {
-			writeOutput("ghostepsilon");
-			for (double i = 0.3; i <= 1.001; i += 0.1) {
-				pacman.setGhostEpsilon(i);
-				writeOutput("Ghost epsilon: " + i);
-				try {
-					exec.runExperiment(pacman, ghosts, numTrials, false);
-				} catch (Exception ex) {
-				}
-			}
-		}
-		//
-		if (args[2].equals("pppenalty1")) {
-			writeOutput("pppenalty1");
-			for (double i = 0.1; i <= .5001; i += 0.15) {
-				for (double j = 0.1; j <= 1.001; j += 0.15) {
-					writeOutput("Penalties: 1: " + i + " 2: " + j);
-					pacman.setPPPenalties(i, j);
-					try {
-						exec.runExperiment(pacman, ghosts, numTrials, false);
-					} catch (Exception ex) {
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("pppenalty2")) {
-			writeOutput("pppenalty2");
-			for (double i = 0.6; i <= 1.001; i += 0.15) {
-				for (double j = 0.1; j <= 1.001; j += 0.15) {
-					writeOutput("Penalties: 1: " + i + " 2: " + j);
-					pacman.setPPPenalties(i, j);
-					try {
-						exec.runExperiment(pacman, ghosts, numTrials, false);
-					} catch (Exception ex) {
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("safety1")) {
-			writeOutput("safety1");
-			for (double i = 0.5; i <= .7; i += 0.05) {
-				for (double j = 0.5; j <= .9; j += 0.05) {
-					for (double k = 0.5; k <= .9; k += 0.05) {
-						writeOutput("Safety: default: " + i + " hard: " + j + " easy: " + k);
-						pacman.safetyT = i;
-						pacman.hardSafetyT = j;
-						pacman.easySafetyT = k;
-						try {
-							exec.runExperiment(pacman, ghosts, numTrials, false);
-						} catch (Exception ex) {
-						}
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("safety2")) {
-			writeOutput("safety2");
-			for (double i = 0.75; i <= .9; i += 0.05) {
-				for (double j = 0.5; j <= .9; j += 0.05) {
-					for (double k = 0.5; k <= .9; k += 0.05) {
-						writeOutput("Safety: default: " + i + " hard: " + j + " easy: " + k);
-						pacman.safetyT = i;
-						pacman.hardSafetyT = j;
-						pacman.easySafetyT = k;
-						try {
-							exec.runExperiment(pacman, ghosts, numTrials, false);
-						} catch (Exception ex) {
-						}
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("ghostselect1")) {
-			writeOutput("ghostselect1");
-			for (double i = 0.1; i <= 0.3; i += 0.1) {
-				for (double j = 0.1; j <= 0.7; j += 0.1) {
-					for (double k = 0.1; k <= 0.7; k += 0.1) {
-						writeOutput("Ghost select scores: default: " + i + " hard: " + j
-								+ " easy: " + k);
-						pacman.ghostSelectScore = i;
-						pacman.hardGhostSelectScore = j;
-						pacman.easyGhostSelectScore = k;
-						try {
-							exec.runExperiment(pacman, ghosts, numTrials, false);
-						} catch (Exception ex) {
-						}
-					}
-				}
-			}
-		}
-		//
-		if (args[2].equals("ghostselect2")) {
-			writeOutput("ghostselect2");
-			for (double i = 0.4; i <= 0.7; i += 0.1) {
-				for (double j = 0.1; j <= 0.7; j += 0.1) {
-					for (double k = 0.1; k <= 0.7; k += 0.1) {
-						writeOutput("Ghost select scores: default: " + i + " hard: " + j
-								+ " easy: " + k);
-						pacman.ghostSelectScore = i;
-						pacman.hardGhostSelectScore = j;
-						pacman.easyGhostSelectScore = k;
-						try {
-							exec.runExperiment(pacman, ghosts, numTrials, false);
-						} catch (Exception ex) {
-						}
-					}
-				}
-			}
+			prop[0] = firstVal;
+			return true;
+		} else {
+			// We've reached the end of the list
+			return false;
 		}
 	}
 
@@ -380,7 +154,7 @@ public class Executor {
 		System.out.println(output);
 	}
 
-	public void runExperiment(Controller<MOVE> pacManController,
+	public static void runExperiment(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, int trials, boolean printall) {
 		double avgScore = 0, maxScore = 0, minScore = Double.POSITIVE_INFINITY, S;
 		int[] values = new int[trials];
