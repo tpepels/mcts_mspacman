@@ -72,7 +72,7 @@ public class Executor {
 		}
 		//
 		numTrials = Integer.parseInt(args[1]);
-		System.out.println("Running " + numTrials + " games");
+		writeOutput("Running " + numTrials + " games");
 		printall = Boolean.parseBoolean(args[3]);
 		//
 		outFile = args[0];
@@ -98,7 +98,7 @@ public class Executor {
 					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.ghostbuster.myghosts")
 					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.memetix.myghost")
 					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.eiisolver.myghost")) {
-
+				System.out.println("Opponent: " + setting.opponent);
 				ghosts = (Controller<EnumMap<GHOST, MOVE>>) Class.forName(setting.opponent)
 						.newInstance();
 			}
@@ -109,8 +109,12 @@ public class Executor {
 		pacman = new MyPacMan();
 		setting.setPropertiesList();
 		loopNextProperty(setting.properties, 0);
+		if(noLoop) { // There was no list of values, we just run the number of tests with the given setting
+			pacman.loadSettings(setting);
+			runExperiment(pacman, ghosts, numTrials, printall);
+		}
 	}
-
+	public static boolean noLoop = true;
 	public static boolean loopNextProperty(ArrayList<double[]> properties, int index) {
 		// Check for the next property to loop over
 		while(index < properties.size() && properties.get(index).length <= 1) {
@@ -125,10 +129,12 @@ public class Executor {
 			for(int i = 0; i < prop.length; i++) {
 				// Always place the property to test at the start of the list
 				prop[0] = prop[i];
-				System.out.println(name + " value: " + prop[i]);
+				writeOutput(name + " value: " + prop[i]);
+				//
 				if(!loopNextProperty(properties, index + 1)) {
 					pacman.loadSettings(setting);
 					runExperiment(pacman, ghosts, numTrials, printall);
+					noLoop = false;
 				}
 			}
 			prop[0] = firstVal;
@@ -212,7 +218,7 @@ public class Executor {
 		writeOutput(":: Maximum score: " + maxScore);
 		writeOutput(":: Minimum score: " + minScore);
 		writeOutput(":: Std dev: " + Math.sqrt(stdSum / (double) realTrials));
-		writeOutput("-------------------========-----------------------");
+		writeOutput("");
 	}
 
 	public void runGame(Controller<MOVE> pacManController,

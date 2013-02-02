@@ -346,7 +346,7 @@ public class DiscreteGame {
 	}
 
 	public int pacManDistanceToHeading() {
-		if (!pacManReversalStatus)
+		if (!pacManReversalStatus && currentPacManEdge != null)
 			return currentPacManEdge.length - timeOnCurrentEdge;
 		else
 			return timeOnCurrentEdge;
