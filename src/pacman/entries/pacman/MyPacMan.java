@@ -449,8 +449,7 @@ public class MyPacMan extends Controller<MOVE> {
 	/**
 	 * Runs monte carlo search tree until the current time == timeDue
 	 * 
-	 * @param timeDue
-	 *            The time at which the algorithm should stop
+	 * @param timeDue The time at which the algorithm should stop
 	 */
 	private void runSimulations(long timeDue) {
 		MCTNode expandNode = null, simulationNode = null;
@@ -459,7 +458,7 @@ public class MyPacMan extends Controller<MOVE> {
 			simulations++;
 			//
 			root.addVisit();
-			expandNode = root.selection(selection, true);
+			expandNode = root.selection(selection, true, maxPathLength);
 			simulationNode = expandNode;
 
 			// Check if the expandnode can be expanded

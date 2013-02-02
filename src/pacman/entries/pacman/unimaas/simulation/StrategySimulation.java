@@ -420,11 +420,9 @@ public class StrategySimulation {
 			pillsEaten = tempPills;
 			ghostsEaten = tempGhosts;
 			currentEdgesVisited = tempDGame.getVisitedEdgeCount();
-			pacLocation = tempGame.getPacmanCurrentNodeIndex();
-			//
-			this.gameState = tempGame;
-			this.dGame = tempDGame;
-			//
+			pacLocation = tempGame.getPacmanCurrentNodeIndex();			
+			gameState = tempGame;
+			dGame = tempDGame;
 			died = false;
 			pacManMover = new PacManMover(gameState, dGame);
 			ghostMover = new PinchGhostMover(gameState, dGame);
@@ -433,7 +431,6 @@ public class StrategySimulation {
 		} else if (died) {
 			CauseOfDeath.tree++;
 		}
-
 		// Playout phase
 		if (!died && !nextMaze && !illegalPP) {
 			followingPath = false;

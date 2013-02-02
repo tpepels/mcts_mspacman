@@ -532,14 +532,28 @@ public abstract class MCTNode {
 	/**
 	 * Selects a leafnode in the tree for expansion according to the given selection method.
 	 * 
-	 * @param selection
-	 *            The class containing the selection method
+	 * @param selection The class containing the selection method
 	 * @return The selected leafnode.
 	 */
 	public MCTNode selection(MCTSelection selection, boolean maxSelection) {
 		MCTNode node = this;
 
 		while (!node.isLeaf()) {
+			node = selection.selectNode(node, maxSelection);
+		}
+		return node;
+	}
+	
+	/**
+	 * Selects a leafnode in the tree for expansion according to the given selection method.
+	 * 
+	 * @param selection The class containing the selection method
+	 * @return The selected leafnode.
+	 */
+	public MCTNode selection(MCTSelection selection, boolean maxSelection, int maxPathLength) {
+		MCTNode node = this;
+
+		while (!node.isLeaf() && node.pathLength <= maxPathLength) {
 			node = selection.selectNode(node, maxSelection);
 		}
 		return node;
