@@ -74,8 +74,8 @@ public class MyPacMan extends Controller<MOVE> {
 		UCTSelection.C = setting.uctC[0];
 		UCTSelection.minVisits = (int) setting.minVisits[0];
 		//
-		simulation.pp_penalty1 = setting.ppPenalty1[0];
-		simulation.pp_penalty2 = setting.ppPenalty2[0];
+		// simulation.pp_penalty1 = setting.ppPenalty1[0];
+		// simulation.pp_penalty2 = setting.ppPenalty2[0];
 		//
 		PacManMover.epsilon = setting.pacEpsilon[0];
 		PinchGhostMover.epsilon = setting.ghostEpsilon[0];
@@ -115,9 +115,10 @@ public class MyPacMan extends Controller<MOVE> {
 			if (prevMoveSurvivalRate < safetyT) {
 				selectionType = SelectionType.SurvivalRate;
 			} else {
+				// Check if we should go for the ghosts
 				root.propagateMaxValues(SelectionType.GhostScore, safetyT);
 				for (MCTNode c : root.getChildren()) {
-					if (c.getAlphaGhostScore() > ghostSelectScore) {
+					if (c.getAlphaGhostScore() >= ghostSelectScore) {
 						selectionType = SelectionType.GhostScore;
 					}
 				}
@@ -362,10 +363,9 @@ public class MyPacMan extends Controller<MOVE> {
 		boolean feasableGhost = false;
 		for (GHOST g : GHOST.values()) {
 			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
-				//
 				int dist = gameState.getShortestPathDistance(pacLoc,
 						gameState.getGhostCurrentNodeIndex(g))
-						- (Constants.EAT_DISTANCE * 2);
+						- (Constants.EAT_DISTANCE * 2) - 2; // Assume we are moving toward the ghost and the ghost toward us.
 				feasableGhost = (dist <= gameState.getGhostEdibleTime(g));
 				if (feasableGhost)
 					break;

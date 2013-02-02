@@ -34,11 +34,11 @@ public class StrategySimulation {
 	public static int minSteps = 1;
 	public static double pillPower = 1.2;
 	public static boolean trailGhost = false;
-	public static double sminGhostNorm = .4;
+	// public static double sminGhostNorm = .4;
 	// For competition
 	// hardMinGhostNorm = .4, easyMinGhostNorm = .55;
 	//
-	public double pp_penalty1 = .2, pp_penalty2 = .1;
+	// public double pp_penalty1 = .2, pp_penalty2 = .1;
 	public boolean last_good_config = true;
 	//
 	private GhostMoveGenerator ghostMover;
@@ -47,7 +47,6 @@ public class StrategySimulation {
 	private SelectionType selectionType;
 	private Game gameState;
 	//
-	private boolean targetSelection = false;
 	private int maxSimulations;
 	private int lastGoodTrailGhost = -1;
 	private boolean lastGoodTv = false, lastGoodTG = false;
@@ -56,14 +55,14 @@ public class StrategySimulation {
 	private boolean nextMaze, followingPath;
 	private double pillNorm, ghostNorm, pillsEaten, edgePillsEaten, ghostsEaten, tempPills,
 			tempGhosts;
-	//minGhostNorm;
+	// minGhostNorm;
 	//
 	// Fields used for determining if pacman was trapped.
 	boolean frontBlocked, rearBlocked;
 	int pacHeading, pacRear, pacEdge, ghostJ, ghostEdge, ghostHeading, treePhase;
 	//
 	private int mazeBefore, pwrPillsBefore, currentEdgesVisited;
-	private boolean died, targetReached, atePower, ateGhost, illegalPP;
+	private boolean died, atePower, ateGhost, illegalPP;
 	private boolean[] ghostVector = new boolean[Constants.NUM_GHOSTS];
 	private int[] edibleTimes = new int[Constants.NUM_GHOSTS];
 	private MOVE pacMove, lastMove;
@@ -74,17 +73,17 @@ public class StrategySimulation {
 	public double gameCount, deathCount;
 
 	//
-//	public StrategySimulation() {
-//		this.minGhostNorm = StrategySimulation.sminGhostNorm;
-//	}
+	// public StrategySimulation() {
+	// this.minGhostNorm = StrategySimulation.sminGhostNorm;
+	// }
 
-//	public void setDecreasedMinGhostNorm() {
-//		this.minGhostNorm = StrategySimulation.hardMinGhostNorm;
-//	}
-//
-//	public void setEasyMinGhostNorm() {
-//		this.minGhostNorm = StrategySimulation.easyMinGhostNorm;
-//	}
+	// public void setDecreasedMinGhostNorm() {
+	// this.minGhostNorm = StrategySimulation.hardMinGhostNorm;
+	// }
+	//
+	// public void setEasyMinGhostNorm() {
+	// this.minGhostNorm = StrategySimulation.easyMinGhostNorm;
+	// }
 
 	/**
 	 * The number of steps that were made in the tree-phase.
@@ -349,11 +348,11 @@ public class StrategySimulation {
 		tempGhosts = 0;
 		tempMaxSim = 0;
 		ghostsEaten = 0;
+		//
 		nextMaze = false;
 		ateGhost = false;
 		atePower = false;
 		illegalPP = false;
-		targetReached = false;
 		died = false;
 
 		// First follow the path to the position represented by the node
@@ -435,11 +434,6 @@ public class StrategySimulation {
 			CauseOfDeath.tree++;
 		}
 
-		if (maxSimulations < 20) {
-			// System.err.println("almost not simulations left!");
-			// Just make sure we still have some randomness left
-			maxSimulations = 20;
-		}
 		// Playout phase
 		if (!died && !nextMaze && !illegalPP) {
 			followingPath = false;
@@ -463,23 +457,6 @@ public class StrategySimulation {
 		} else if (!followingPath) {
 			//
 			CauseOfDeath.simulation++;
-			// //
-			// if (!followingPath && !nextMaze && !illegalPP && debugGameState != null) {
-			// pacManMover = new PacManMover(debugGameState, debugDGameState);
-			// MOVE mv = pacManMover.generatePacManMove(selectionType);
-			// if (pacManMover.lastJSafety < 10) {
-			// new GameView(gameState).showGame();
-			// new GameView(debugGameState).showGame();
-			// System.err.println("Dgame: " + dGame.getLastPacManJunction() + " debugDGame: "
-			// + debugDGameState.getLastPacManJunction());
-			// System.err.println("Would not do again, did: " + lastJMove + " should be: " + mv + " safety: "
-			// + pacManMover.safety);
-			// pacManMover.generatePacManMove(selectionType);
-			// }
-			// if (lastJTime != debugGameState.getCurrentLevelTime()) {
-			// System.err.println("Wrong time! " + pacManMover.safety);
-			// }
-			// }
 		}
 		//
 		if (died) {
@@ -496,17 +473,14 @@ public class StrategySimulation {
 		pillNorm = .0;
 		ghostNorm = .0;
 		// Determine the pill-score
-		if (targetReached && targetSelection || pillsBefore == 0
-				|| (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT)) {
+		if (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT) {
 			pillNorm = 1.;
-		} else {
+		} else if (pwrPillsBefore <= gameState.getNumberOfActivePowerPills()
+				&& (pillsEaten > 0 || edgePillsEaten > 0)
+				&& selectionType != SelectionType.GhostScore) {
 			//
-			if ((pillsEaten > 0 || edgePillsEaten > 0) && selectionType != SelectionType.GhostScore) {
-				pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
-			}
+			pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
 		}
-		if(pwrPillsBefore > gameState.getNumberOfActivePowerPills())
-			pillNorm = 0.;
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
 			if (ghostDivisor == 0) {
@@ -515,22 +489,9 @@ public class StrategySimulation {
 						* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
 								gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
 			}
-			ghostNorm = ghostsEaten / ghostDivisor;
 			//
-			// if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()
-			// && ghostNorm < minGhostNorm) {
-			// // Penalty is a lower pill score when pp was eaten, but not enough ghosts
-			// pillNorm *= pp_penalty1;
-			// ghostNorm *= pp_penalty1;
-			// }
-			// else {
-			// pillNorm += (ghostNorm * .4);
-			// }
-		} 
-//		else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
-//			// Penalty is a lower pill score when pp was eaten, but no ghosts
-//			pillNorm *= pp_penalty2;
-//		}
+			ghostNorm = ghostsEaten / ghostDivisor;
+		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
 	}
 }
