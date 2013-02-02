@@ -21,8 +21,6 @@ public class MyPacMan extends Controller<MOVE> {
 	private StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
 
-	// At this time, start eating ghosts a.s.a.p.
-	// private final int endGameTime = Constants.MAX_TIME - 3000;
 	// Maximum length of a tree-path and maximum simulation steps in simulation phase
 	public int maxPathLength, maxSimulations;
 	// Safety and minimum ghost score parameters.
@@ -32,6 +30,10 @@ public class MyPacMan extends Controller<MOVE> {
 	private double reversePenalty; // The reward penalty for selecting a reverse move
 	private double discount; // Decay factor for the tree decay
 
+	
+
+	// At this time, start eating ghosts a.s.a.p.
+	// private final int endGameTime = Constants.MAX_TIME - 3000;
 	// Set some slacktime for the search to ensure on time return of move (For competition only)
 	// private int slackTime = 2, earlyCount = 0; // Slack on simulations
 	// private final int finalSlackTime = 1; // Total slack time

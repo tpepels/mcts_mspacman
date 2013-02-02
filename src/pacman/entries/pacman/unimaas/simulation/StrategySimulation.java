@@ -32,9 +32,11 @@ public class StrategySimulation {
 	//
 	public final int numPills[] = { 220, 240, 238, 234 };
 	public static int minSteps = 1;
-	public static double pillPower = 1.1;
+	public static double pillPower = 1.2;
 	public static boolean trailGhost = false;
-	public static double sminGhostNorm = .45, hardMinGhostNorm = .4, easyMinGhostNorm = .55;
+	public static double sminGhostNorm = .4;
+	// For competition
+	// hardMinGhostNorm = .4, easyMinGhostNorm = .55;
 	//
 	public double pp_penalty1 = .2, pp_penalty2 = .1;
 	public boolean last_good_config = true;
@@ -53,7 +55,8 @@ public class StrategySimulation {
 	private int pillsBefore, pacLocation, tempMaxSim;
 	private boolean nextMaze, followingPath;
 	private double pillNorm, ghostNorm, pillsEaten, edgePillsEaten, ghostsEaten, tempPills,
-			tempGhosts, minGhostNorm;
+			tempGhosts;
+	//minGhostNorm;
 	//
 	// Fields used for determining if pacman was trapped.
 	boolean frontBlocked, rearBlocked;
@@ -71,17 +74,17 @@ public class StrategySimulation {
 	public double gameCount, deathCount;
 
 	//
-	public StrategySimulation() {
-		this.minGhostNorm = StrategySimulation.sminGhostNorm;
-	}
+//	public StrategySimulation() {
+//		this.minGhostNorm = StrategySimulation.sminGhostNorm;
+//	}
 
-	public void setDecreasedMinGhostNorm() {
-		this.minGhostNorm = StrategySimulation.hardMinGhostNorm;
-	}
-
-	public void setEasyMinGhostNorm() {
-		this.minGhostNorm = StrategySimulation.easyMinGhostNorm;
-	}
+//	public void setDecreasedMinGhostNorm() {
+//		this.minGhostNorm = StrategySimulation.hardMinGhostNorm;
+//	}
+//
+//	public void setEasyMinGhostNorm() {
+//		this.minGhostNorm = StrategySimulation.easyMinGhostNorm;
+//	}
 
 	/**
 	 * The number of steps that were made in the tree-phase.
@@ -502,6 +505,8 @@ public class StrategySimulation {
 				pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
 			}
 		}
+		if(pwrPillsBefore > gameState.getNumberOfActivePowerPills())
+			pillNorm = 0.;
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
 			if (ghostDivisor == 0) {
@@ -512,19 +517,20 @@ public class StrategySimulation {
 			}
 			ghostNorm = ghostsEaten / ghostDivisor;
 			//
-			if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()
-					&& ghostNorm < minGhostNorm) {
-				// Penalty is a lower pill score when pp was eaten, but not enough ghosts
-				pillNorm *= pp_penalty1;
-				ghostNorm *= pp_penalty1;
-			}
+			// if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()
+			// && ghostNorm < minGhostNorm) {
+			// // Penalty is a lower pill score when pp was eaten, but not enough ghosts
+			// pillNorm *= pp_penalty1;
+			// ghostNorm *= pp_penalty1;
+			// }
 			// else {
 			// pillNorm += (ghostNorm * .4);
 			// }
-		} else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
-			// Penalty is a lower pill score when pp was eaten, but no ghosts
-			pillNorm *= pp_penalty2;
-		}
+		} 
+//		else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
+//			// Penalty is a lower pill score when pp was eaten, but no ghosts
+//			pillNorm *= pp_penalty2;
+//		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
 	}
 }

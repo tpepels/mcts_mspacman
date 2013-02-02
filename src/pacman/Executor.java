@@ -47,11 +47,9 @@ public class Executor {
 	public static void main(String[] args) {
 		Executor exec = new Executor();
 
-		System.out.println("Ms PacMan started with " + args.length + " arguments.");
-		//
-		
 		if (args.length == 0) {
 			setting = Settings.getDefaultSetting();
+			
 			MyPacMan pm = new MyPacMan();
 			pm.loadSettings(setting);
 			exec.runGame(pm, new Legacy2TheReckoning(), true, Constants.DELAY);
@@ -69,7 +67,7 @@ public class Executor {
 			return;
 		} else if (args[0].equals("?")) {
 			System.out
-					.println("Usage: \n java -jar MsPacMan.jar <output file> <numTrials> <settings_file> <verbose>");
+					.println("Usage: \n java -jar MsPacMan.jar <output_file> <num_trials> <settings_file> <verbose_output>");
 			return;
 		}
 		//

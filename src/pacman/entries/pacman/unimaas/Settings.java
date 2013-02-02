@@ -83,7 +83,7 @@ public class Settings {
 		defSettings.maxSimulations[0] = 40;
 		//
 		defSettings.safetyT[0] = .75;
-		defSettings.ghostSelectScore[0] = .5;
+		defSettings.ghostSelectScore[0] = .4;
 		defSettings.reversePenalty[0] = .9;
 		defSettings.discount[0] = .7;
 		//
@@ -106,7 +106,7 @@ public class Settings {
 		defSettings.last_good_config = true;
 		defSettings.enable_trailghost = true;
 		//
-		defSettings.opponent = "Legacy2TheReckoning";
+		defSettings.opponent = "pacman.controllers.examples.Legacy2TheReckoning";
 		return defSettings;
 	}
 
