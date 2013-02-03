@@ -1,0 +1,7 @@
+Stuff to test:
+
+- Alhpa * old + (1 - alpha) * current
+		vs
+- Alpha * total + (1 - alpha) * current
+
+- Mean vs Max (selection + backprop)

@@ -36,6 +36,40 @@ public class Settings {
 	//
 	public ArrayList<double[]> properties;
 
+	public static Settings getDefaultSetting() {
+		Settings defSettings = new Settings();
+		//
+		defSettings.maxPathLength[0] = 70;
+		defSettings.maxSimulations[0] = 40;
+		//
+		defSettings.safetyT[0] = .72;
+		defSettings.ghostSelectScore[0] = .5;
+		defSettings.reversePenalty[0] = .8;
+		defSettings.discount[0] = .5;
+		//
+		defSettings.uctC[0] = .9;
+		defSettings.minVisits[0] = 10;
+		//
+		defSettings.ppPenalty1[0] = .5;
+		defSettings.ppPenalty2[0] = .2;
+		//
+		defSettings.pacEpsilon[0] = .7;
+		defSettings.ghostEpsilon[0] = .7;
+		//
+		defSettings.alpha_pill[0] = 1.;
+		defSettings.alpha_ghosts[0] = .1;
+		//
+		defSettings.tree_reuse = true;
+		defSettings.tree_decay = true;
+		defSettings.tree_var_depth = true;
+		defSettings.strategic_playout = true;
+		defSettings.last_good_config = true;
+		defSettings.enable_trailghost = true;
+		//
+		defSettings.opponent = "pacman.controllers.examples.Legacy2TheReckoning";
+		return defSettings;
+	}
+
 	public Settings() {
 		maxPathLength = new double[1];
 		maxSimulations = new double[1];
@@ -57,7 +91,7 @@ public class Settings {
 		alpha_pill = new double[1];
 		alpha_ghosts = new double[1];
 	}
-	
+
 	public void setPropertiesList() {
 		properties = new ArrayList<double[]>();
 		properties.add(maxPathLength);
@@ -74,40 +108,6 @@ public class Settings {
 		properties.add(ghostEpsilon);
 		properties.add(alpha_pill);
 		properties.add(alpha_ghosts);
-	}
-
-	public static Settings getDefaultSetting() {
-		Settings defSettings = new Settings();
-		//
-		defSettings.maxPathLength[0] = 80;
-		defSettings.maxSimulations[0] = 40;
-		//
-		defSettings.safetyT[0] = .75;
-		defSettings.ghostSelectScore[0] = .45;
-		defSettings.reversePenalty[0] = .8;
-		defSettings.discount[0] = .5;
-		//
-		defSettings.uctC[0] = .9;
-		defSettings.minVisits[0] = 10;
-		//
-		defSettings.ppPenalty1[0] = .5;
-		defSettings.ppPenalty2[0] = .2;
-		//
-		defSettings.pacEpsilon[0] = .7;
-		defSettings.ghostEpsilon[0] = .7;
-		//
-		defSettings.alpha_pill[0] = 1.;
-		defSettings.alpha_ghosts[0] = 1.;
-		//
-		defSettings.tree_reuse = true;
-		defSettings.tree_decay = true;
-		defSettings.tree_var_depth = true;
-		defSettings.strategic_playout = true;
-		defSettings.last_good_config = true;
-		defSettings.enable_trailghost = true;
-		//
-		defSettings.opponent = "pacman.controllers.examples.Legacy2TheReckoning";
-		return defSettings;
 	}
 
 	public static Settings deserializeSettings(String file) throws IOException {

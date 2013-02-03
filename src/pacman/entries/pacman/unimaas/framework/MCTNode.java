@@ -145,42 +145,45 @@ public abstract class MCTNode {
 			maxCurrentVisitCount = currentVisitCount;
 		}
 	}
-	
+
 	/**
 	 * Validate the tree using the gamestate to check all junctions
+	 * 
 	 * @param game
 	 */
 	public void validate(Game game) {
-		if(isRoot() && children != null) {
-			if(junctionIndex != -1) {
+		if (isRoot() && children != null) {
+			if (junctionIndex != -1) {
 				// Check if this is actually pacman's position
-				if(game.getPacmanCurrentNodeIndex() != junctionIndex) {
+				if (game.getPacmanCurrentNodeIndex() != junctionIndex) {
 					System.err.println("Error at root, pacman is not on junction.");
 				}
 				// Check if the number of children match the possible options
-				if(game.getPossibleMoves(junctionIndex).length != children.length) {
+				if (game.getPossibleMoves(junctionIndex).length != children.length) {
 					System.err.println("Error at root, on junction.");
 					System.err.println("Number of children: " + children.length);
 					System.err.println("Should be: " + game.getPossibleMoves(junctionIndex).length);
 				}
 			} else {
 				// Check if the number of children match the possible options
-				if(game.getPossibleMoves(game.getPacmanCurrentNodeIndex()).length != children.length) {
+				if (game.getPossibleMoves(game.getPacmanCurrentNodeIndex()).length != children.length) {
 					System.err.println("Error at root, on edge.");
 					System.err.println("Number of children: " + children.length);
-					System.err.println("Should be: " + game.getPossibleMoves(game.getPacmanCurrentNodeIndex()).length);
+					System.err.println("Should be: "
+							+ game.getPossibleMoves(game.getPacmanCurrentNodeIndex()).length);
 				}
 			}
 			//
 			for (MCTNode c : children) {
 				c.validate(game);
 			}
-		} else if(children != null) {
+		} else if (children != null) {
 			// Check if the number of children match the possible options -1 for reverse
-			if(game.getPossibleMoves(junctionIndex).length - 1 != children.length) {
+			if (game.getPossibleMoves(junctionIndex).length - 1 != children.length) {
 				System.err.println("Error at child, on junction.");
 				System.err.println("Number of children: " + children.length);
-				System.err.println("Should be: " + (game.getPossibleMoves(junctionIndex).length - 1));
+				System.err.println("Should be: "
+						+ (game.getPossibleMoves(junctionIndex).length - 1));
 			}
 			//
 			for (MCTNode c : children) {
@@ -199,7 +202,7 @@ public abstract class MCTNode {
 	}
 
 	// The children of a node should represent at least this part of the node's visits.
-	private double minChildVisitRate = .6;
+	private double minChildVisitRate = .4;
 
 	public void backPropagate(MCTResult result, SelectionType selectionType, int treePhaseDepth) {
 		MCTNode node = this;
@@ -403,20 +406,21 @@ public abstract class MCTNode {
 	 */
 	public boolean canExpand(int maxPathLength, boolean variable_depth, int maxNodeDepth) {
 		if (!isRoot()) {
-			if (variable_depth && getPathLength() <= maxPathLength) {
-				// Don't expand nodes that have not been simulated
-				if (currentVisitCount < UCTSelection.minVisits) {
-					return false;
-				}
-			} else if (!variable_depth && depth <= maxNodeDepth) {
-				// Don't expand nodes that have not been simulated
-				if (currentVisitCount < UCTSelection.minVisits) {
-					return false;
-				}
-			} else {
+			// make sure the node has sufficient simulations
+			if (currentVisitCount < UCTSelection.minVisits) {
 				return false;
 			}
+			// Enforce the max pathlength rule
+			if (variable_depth && getPathLength() > maxPathLength) {
+				return false;
+			}
+			// Max node depth
+			if (!variable_depth && depth > maxNodeDepth) {
+				return false;
+			}
+			return true;
 		}
+		// The root-node can always be expanded
 		return true;
 	}
 
@@ -532,7 +536,8 @@ public abstract class MCTNode {
 	/**
 	 * Selects a leafnode in the tree for expansion according to the given selection method.
 	 * 
-	 * @param selection The class containing the selection method
+	 * @param selection
+	 *            The class containing the selection method
 	 * @return The selected leafnode.
 	 */
 	public MCTNode selection(MCTSelection selection, boolean maxSelection) {
@@ -543,11 +548,12 @@ public abstract class MCTNode {
 		}
 		return node;
 	}
-	
+
 	/**
 	 * Selects a leafnode in the tree for expansion according to the given selection method.
 	 * 
-	 * @param selection The class containing the selection method
+	 * @param selection
+	 *            The class containing the selection method
 	 * @return The selected leafnode.
 	 */
 	public MCTNode selection(MCTSelection selection, boolean maxSelection, int maxPathLength) {
@@ -679,8 +685,8 @@ public abstract class MCTNode {
 	}
 
 	public double getAlphaGhostScore() {
-		return UCTSelection.alpha_g * (getMaxGhostScore()) + (1. - UCTSelection.alpha_g)
-				* (getCurrentMaxGhostScore()) * getAlphaSurvivalScore();
+		return UCTSelection.alpha_g * (getMaxGhostScore() * getMaxSurvivalRate()) + (1. - UCTSelection.alpha_g)
+				* (getCurrentMaxGhostScore() * getCurrentMaxSurvivals());
 	}
 
 	public double getPillScore() {
@@ -717,7 +723,6 @@ public abstract class MCTNode {
 
 	public double getMaxGhostScore() {
 		if (getTotalMaxVisitCount() > 0) {
-
 			return (maxScores[1] / getTotalMaxVisitCount());
 		} else {
 			return 0;
