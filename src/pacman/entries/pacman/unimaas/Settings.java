@@ -56,8 +56,8 @@ public class Settings {
 		defSettings.pacEpsilon[0] = .7;
 		defSettings.ghostEpsilon[0] = .7;
 		//
-		defSettings.alpha_pill[0] = 1.;
-		defSettings.alpha_ghosts[0] = .1;
+		defSettings.alpha_pill[0] = .5;
+		defSettings.alpha_ghosts[0] = .5;
 		//
 		defSettings.tree_reuse = true;
 		defSettings.tree_decay = true;

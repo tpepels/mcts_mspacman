@@ -16,33 +16,17 @@ import pacman.game.Constants.*;
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
 	private final boolean DEBUG = false;
-
 	// To use different simulation strategy or selection, set them here.
 	private StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
-
 	// Maximum length of a tree-path and maximum simulation steps in simulation phase
 	public int maxPathLength, maxSimulations;
 	// Safety and minimum ghost score parameters.
 	public double safetyT, ghostSelectScore;
-
 	// penalties and discounts
 	private double reversePenalty; // The reward penalty for selecting a reverse move
 	private double discount; // Decay factor for the tree decay
-
-	
-
-	// At this time, start eating ghosts a.s.a.p.
-	// private final int endGameTime = Constants.MAX_TIME - 3000;
-	// Set some slacktime for the search to ensure on time return of move (For competition only)
-	// private int slackTime = 2, earlyCount = 0; // Slack on simulations
-	// private final int finalSlackTime = 1; // Total slack time
-
-	/* Competition only values
-	 * public double hardSafetyT = .87, hardGhostSelectScore = .4; public double easySafetyT = .74, easyGhostSelectScore
-	 * = .55; private int timesDiedInFirstMaze = 0;
-	 */
-
+	//
 	private boolean atJunction = false, prevLocationWasJunction = false;
 	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
 	private final int[] ghostJunctions = new int[4];
@@ -241,7 +225,6 @@ public class MyPacMan extends Controller<MOVE> {
 				if (decay)
 					root.discountValues(discount);
 				root.propagateMaxValues(selectionType);
-				//
 			} else if (prevLocationWasJunction) {
 				MCTNode forwardChild = null;
 				// Select the new root based on the last move made.
@@ -268,13 +251,13 @@ public class MyPacMan extends Controller<MOVE> {
 				newChildren[1].pathLength = 0;
 				newChildren[1].addDistance(1);
 				// Array to temporarily store the new children for the old root in.
-				MCTNode[] newReverseChildren = new MCTNode[newChildren[1].getChildren().length - 1];
+				MCTNode[] newReverseChildren = new MCTNode[root.getChildren().length - 1];
 				int i = 0, k = 0;
 				// This node still has the forwardChild as one of its children.
 				while (k < newReverseChildren.length) {
 					// Get the children sans forwardChild
-					if (newChildren[1].getChildren()[i] != forwardChild) {
-						newReverseChildren[k] = newChildren[1].getChildren()[i];
+					if (root.getChildren()[i] != forwardChild) {
+						newReverseChildren[k] = root.getChildren()[i];
 						k++;
 					}
 					i++;
@@ -285,8 +268,9 @@ public class MyPacMan extends Controller<MOVE> {
 				newChildren[1].setParent(root);
 				newChildren[0].setParent(root);
 				root.setChildren(newChildren);
+				// Copy the stats from the old root
 				root.copyStats(newChildren[1]);
-				// Substract the stats from the old root.
+				// Substract the stats of the forward node from the old root.
 				newChildren[1].substractStats(newChildren[0]);
 				root.setNodeDepth(0);
 				//
@@ -328,6 +312,7 @@ public class MyPacMan extends Controller<MOVE> {
 			return;
 		}
 		root.setEdge(currentPacmanEdge);
+		// root.validate(gameState);
 	}
 
 	/**
@@ -532,12 +517,6 @@ public class MyPacMan extends Controller<MOVE> {
 			simulation.gameCount = 0.;
 			simulation.deathCount = 0.;
 		}
-		// For easier ghosts, all lives remain in third maze
-		// if (gameState.getMazeIndex() == 3 && gameState.getPacmanNumberOfLivesRemaining() >= 2) {
-		// ghostSelectScore = easyGhostSelectScore;
-		// safetyT = easySafetyT;
-		// simulation.setEasyMinGhostNorm();
-		// }
 
 		// Pacman died
 		if (gameState.wasPacManEaten()) {
@@ -549,15 +528,6 @@ public class MyPacMan extends Controller<MOVE> {
 			prevLocationWasJunction = false;
 			//
 			dGame.pacmanDied();
-			// When the opponent is strong, go for ghosts sooner.
-			// if (gameState.getCurrentLevel() < 1) {
-			// timesDiedInFirstMaze++;
-			// if (timesDiedInFirstMaze == 1) {
-			// ghostSelectScore = hardGhostSelectScore;
-			// simulation.setDecreasedMinGhostNorm();
-			// safetyT = hardSafetyT;
-			// }
-			// }
 
 		} else if (pacLives < gameState.getPacmanNumberOfLivesRemaining()) {
 			// Pacman gained a life (happens after the first 10.000 points)
@@ -632,10 +602,5 @@ public class MyPacMan extends Controller<MOVE> {
 				ghostsAtJunctions[g.ordinal()] = false;
 			}
 		}
-		// // At the end of the game, make sure to eat as many ghosts as possible.
-		// if (gameState.getTotalTime() >= endGameTime) {
-		// ghostSelectScore = hardGhostSelectScore;
-		// simulation.setDecreasedMinGhostNorm();
-		// }
 	}
 }
