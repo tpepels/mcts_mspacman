@@ -19,8 +19,8 @@ public abstract class MCTNode {
 	public Edge edge;
 	public int depth = 0, pathLength, junctionIndex;
 	// Scores [pill, ghost, survival]
-	public double[] meanScores, maxScores, currentScores, maxCurrentScores;
-	public double totalVisitCount, maxTotalVisitCount, currentVisitCount, maxCurrentVisitCount;
+	public double[] oldScores, oldMaxScores, currentScores, currentMaxScores;
+	public double oldVisitCount, oldMaxVisitCount, currentVisitCount, currentMaxVisitCount;
 	// Tree fields
 	protected MCTNode[] children;
 	private MCTNode parent;
@@ -50,10 +50,10 @@ public abstract class MCTNode {
 		// At first any node will not have child nodes
 		children = null;
 		//
-		maxScores = new double[3];
-		meanScores = new double[3];
+		oldMaxScores = new double[3];
+		oldScores = new double[3];
 		currentScores = new double[3];
-		maxCurrentScores = new double[3];
+		currentMaxScores = new double[3];
 	}
 
 	/**
@@ -78,10 +78,10 @@ public abstract class MCTNode {
 		// At first any node will not have child nodes
 		children = null;
 		//
-		maxScores = new double[3];
-		meanScores = new double[3];
+		oldMaxScores = new double[3];
+		oldScores = new double[3];
 		currentScores = new double[3];
-		maxCurrentScores = new double[3];
+		currentMaxScores = new double[3];
 	}
 
 	public void addDistance(int dist) {
@@ -104,20 +104,20 @@ public abstract class MCTNode {
 
 	public void discountValues(double discount) {
 		//
-		meanScores[0] *= discount;
-		meanScores[1] *= discount;
-		meanScores[2] *= discount;
+		oldScores[0] *= discount;
+		oldScores[1] *= discount;
+		oldScores[2] *= discount;
 		//
-		totalVisitCount *= discount;
+		oldVisitCount *= discount;
 		// Reset the maximum scores, they should be reset later.
-		maxScores = new double[3];
-		maxTotalVisitCount = 0;
+		oldMaxScores = new double[3];
+		oldMaxVisitCount = 0;
 		//
 		currentVisitCount = 0;
-		maxCurrentVisitCount = 0;
+		currentMaxVisitCount = 0;
 		//
 		currentScores = new double[3];
-		maxCurrentScores = new double[3];
+		currentMaxScores = new double[3];
 		//
 		if (children != null) {
 			for (MCTNode c : children) {
@@ -127,22 +127,22 @@ public abstract class MCTNode {
 	}
 
 	public void addValue(MCTResult result) {
-		meanScores[0] += result.pillScore;
+		oldScores[0] += result.pillScore;
 		currentScores[0] += result.pillScore;
-		meanScores[1] += result.ghostScore;
+		oldScores[1] += result.ghostScore;
 		currentScores[1] += result.ghostScore;
 		//
 		if (result.target) {
-			meanScores[2]++;
+			oldScores[2]++;
 			currentScores[2]++;
 		}
 		// Leafnodes have maxvalue = value
 		if (isLeaf()) {
-			maxScores = meanScores;
-			maxCurrentScores = currentScores;
+			oldMaxScores = oldScores;
+			currentMaxScores = currentScores;
 			//
-			maxTotalVisitCount = totalVisitCount;
-			maxCurrentVisitCount = currentVisitCount;
+			oldMaxVisitCount = oldVisitCount;
+			currentMaxVisitCount = currentVisitCount;
 		}
 	}
 
@@ -198,7 +198,7 @@ public abstract class MCTNode {
 	public void addVisit() {
 		// This is the number of visits for the current turn.
 		currentVisitCount++;
-		totalVisitCount++;
+		oldVisitCount++;
 	}
 
 	// The children of a node should represent at least this part of the node's visits.
@@ -208,7 +208,7 @@ public abstract class MCTNode {
 		MCTNode node = this;
 		if (node.depth > treePhaseDepth) {
 			node.currentVisitCount--;
-			node.totalVisitCount--;
+			node.oldVisitCount--;
 		} else {
 			node.addValue(result);
 		}
@@ -218,7 +218,7 @@ public abstract class MCTNode {
 			// Update the node's values (Average Back-propagation)
 			if (node.depth > treePhaseDepth) {
 				node.currentVisitCount--;
-				node.totalVisitCount--;
+				node.oldVisitCount--;
 				node = node.getParent();
 				continue;
 			}
@@ -250,20 +250,20 @@ public abstract class MCTNode {
 			// The children didn't have enough visits compared to this node,
 			// therefore don't use their values to back-propagate
 			if ((childrenVCount / getVisitCount()) < minChildVisitRate) {
-				node.maxScores = node.meanScores;
-				node.maxCurrentScores = node.currentScores;
+				node.oldMaxScores = node.oldScores;
+				node.currentMaxScores = node.currentScores;
 				//
-				node.maxTotalVisitCount = node.totalVisitCount;
-				node.maxCurrentVisitCount = node.currentVisitCount;
+				node.oldMaxVisitCount = node.oldVisitCount;
+				node.currentMaxVisitCount = node.currentVisitCount;
 				node = node.getParent();
 				continue;
 			}
 
-			node.maxScores = topChild.maxScores;
-			node.maxCurrentScores = topChild.maxCurrentScores;
+			node.oldMaxScores = topChild.oldMaxScores;
+			node.currentMaxScores = topChild.currentMaxScores;
 			//
-			node.maxTotalVisitCount = topChild.maxTotalVisitCount;
-			node.maxCurrentVisitCount = topChild.maxCurrentVisitCount;
+			node.oldMaxVisitCount = topChild.oldMaxVisitCount;
+			node.currentMaxVisitCount = topChild.currentMaxVisitCount;
 			//
 			node = node.getParent();
 		}
@@ -282,11 +282,11 @@ public abstract class MCTNode {
 			}
 			// The children didn't have enough visits compared to this node.
 			if (childrenVCount / getVisitCount() < minChildVisitRate) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
+				oldMaxScores = oldScores;
+				currentMaxScores = currentScores;
 				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
+				oldMaxVisitCount = oldVisitCount;
+				currentMaxVisitCount = currentVisitCount;
 				return;
 			}
 			//
@@ -316,19 +316,19 @@ public abstract class MCTNode {
 				}
 			}
 			if (topChild == null) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
+				oldMaxScores = oldScores;
+				currentMaxScores = currentScores;
 				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
+				oldMaxVisitCount = oldVisitCount;
+				currentMaxVisitCount = currentVisitCount;
 				return;
 			}
 			//
-			maxScores = topChild.maxScores;
-			maxCurrentScores = topChild.maxCurrentScores;
+			oldMaxScores = topChild.oldMaxScores;
+			currentMaxScores = topChild.currentMaxScores;
 			//
-			maxTotalVisitCount = topChild.maxTotalVisitCount;
-			maxCurrentVisitCount = topChild.maxCurrentVisitCount;
+			oldMaxVisitCount = topChild.oldMaxVisitCount;
+			currentMaxVisitCount = topChild.currentMaxVisitCount;
 		}
 	}
 
@@ -345,11 +345,11 @@ public abstract class MCTNode {
 			}
 			// The children didn't have enough visits compared to this node.
 			if (childrenVCount / getVisitCount() < minChildVisitRate) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
+				oldMaxScores = oldScores;
+				currentMaxScores = currentScores;
 				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
+				oldMaxVisitCount = oldVisitCount;
+				currentMaxVisitCount = currentVisitCount;
 				return;
 			}
 			//
@@ -381,19 +381,19 @@ public abstract class MCTNode {
 			}
 			//
 			if (topChild == null) {
-				maxScores = meanScores;
-				maxCurrentScores = currentScores;
+				oldMaxScores = oldScores;
+				currentMaxScores = currentScores;
 				//
-				maxTotalVisitCount = totalVisitCount;
-				maxCurrentVisitCount = currentVisitCount;
+				oldMaxVisitCount = oldVisitCount;
+				currentMaxVisitCount = currentVisitCount;
 				return;
 			}
 			//
-			maxScores = topChild.maxScores;
-			maxCurrentScores = topChild.maxCurrentScores;
+			oldMaxScores = topChild.oldMaxScores;
+			currentMaxScores = topChild.currentMaxScores;
 			//
-			maxTotalVisitCount = topChild.maxTotalVisitCount;
-			maxCurrentVisitCount = topChild.maxCurrentVisitCount;
+			oldMaxVisitCount = topChild.oldMaxVisitCount;
+			currentMaxVisitCount = topChild.currentMaxVisitCount;
 		}
 	}
 
@@ -503,11 +503,11 @@ public abstract class MCTNode {
 	}
 
 	public double getTotalMaxVisitCount() {
-		return maxTotalVisitCount;
+		return oldMaxVisitCount;
 	}
 
 	public double getVisitCount() {
-		return totalVisitCount;
+		return oldVisitCount;
 	}
 
 	public double getCurrentVisitCount() {
@@ -586,27 +586,27 @@ public abstract class MCTNode {
 	}
 
 	public void copyStats(MCTNode node2) {
-		System.arraycopy(node2.maxScores, 0, maxScores, 0, maxScores.length);
-		System.arraycopy(node2.meanScores, 0, meanScores, 0, meanScores.length);
+		System.arraycopy(node2.oldMaxScores, 0, oldMaxScores, 0, oldMaxScores.length);
+		System.arraycopy(node2.oldScores, 0, oldScores, 0, oldScores.length);
 		//
-		maxTotalVisitCount = node2.maxTotalVisitCount;
-		totalVisitCount = node2.totalVisitCount;
+		oldMaxVisitCount = node2.oldMaxVisitCount;
+		oldVisitCount = node2.oldVisitCount;
 	}
 
 	public void substractStats(MCTNode node2) {
 		// Substract the stats from the node.
-		totalVisitCount -= node2.totalVisitCount;
-		meanScores[0] -= node2.meanScores[0];
-		meanScores[1] -= node2.meanScores[1];
-		meanScores[2] -= node2.meanScores[2];
+		oldVisitCount -= node2.oldVisitCount;
+		oldScores[0] -= node2.oldScores[0];
+		oldScores[1] -= node2.oldScores[1];
+		oldScores[2] -= node2.oldScores[2];
 	}
 
 	public void addStats(MCTNode node2) {
 		// Add the stats from the node.
-		totalVisitCount += node2.totalVisitCount;
-		meanScores[0] += node2.meanScores[0];
-		meanScores[1] += node2.meanScores[1];
-		meanScores[2] += node2.meanScores[2];
+		oldVisitCount += node2.oldVisitCount;
+		oldScores[0] += node2.oldScores[0];
+		oldScores[1] += node2.oldScores[1];
+		oldScores[2] += node2.oldScores[2];
 	}
 
 	/**
@@ -657,16 +657,16 @@ public abstract class MCTNode {
 		String intro = String.format("Moves %s:", pathDirection);
 		String mean = String.format("Total MEAN\t [%s, %s, %s]\t %d visits.",
 				df2.format(getMeanValue(0)), df2.format(getMeanValue(1)),
-				df2.format(getMeanValue(2)), (int) totalVisitCount);
+				df2.format(getMeanValue(2)), (int) oldVisitCount);
 		String max = String.format("Total MAX\t [%s, %s, %s]\t %d visits.",
 				df2.format(getMaxValue(0)), df2.format(getMaxValue(1)), df2.format(getMaxValue(2)),
-				(int) maxTotalVisitCount);
+				(int) oldMaxVisitCount);
 		String c_mean = String.format("Current MEAN\t [%s, %s, %s]\t %d visits.",
 				df2.format(getCurrentMeanValue(0)), df2.format(getCurrentMeanValue(1)),
 				df2.format(getCurrentMeanValue(2)), (int) currentVisitCount);
 		String c_max = String.format("Current MAX\t [%s, %s, %s]\t %d visits.",
 				df2.format(getCurrentMaxValue(0)), df2.format(getCurrentMaxValue(1)),
-				df2.format(getCurrentMaxValue(2)), (int) maxCurrentVisitCount);
+				df2.format(getCurrentMaxValue(2)), (int) currentMaxVisitCount);
 
 		return String.format(
 				"%s\n\t%s\n\t%s\n\t%s\n\t%s\n----------------------------------------", intro,
@@ -691,7 +691,7 @@ public abstract class MCTNode {
 
 	public double getPillScore() {
 		if (getVisitCount() > 0) {
-			return meanScores[0] / getVisitCount();
+			return oldScores[0] / getVisitCount();
 		} else {
 			return 0;
 		}
@@ -699,7 +699,7 @@ public abstract class MCTNode {
 
 	public double getGhostScore() {
 		if (getVisitCount() > 0) {
-			return meanScores[1] / getVisitCount();
+			return oldScores[1] / getVisitCount();
 		} else {
 			return 0;
 		}
@@ -707,7 +707,7 @@ public abstract class MCTNode {
 
 	public double getSurvivalRate() {
 		if (getVisitCount() > 0) {
-			return meanScores[2] / getVisitCount();
+			return oldScores[2] / getVisitCount();
 		} else {
 			return 0;
 		}
@@ -715,7 +715,7 @@ public abstract class MCTNode {
 
 	public double getMaxPillScore() {
 		if (getTotalMaxVisitCount() > 0) {
-			return (maxScores[0] / getTotalMaxVisitCount());
+			return (oldMaxScores[0] / getTotalMaxVisitCount());
 		} else {
 			return 0;
 		}
@@ -723,7 +723,7 @@ public abstract class MCTNode {
 
 	public double getMaxGhostScore() {
 		if (getTotalMaxVisitCount() > 0) {
-			return (maxScores[1] / getTotalMaxVisitCount());
+			return (oldMaxScores[1] / getTotalMaxVisitCount());
 		} else {
 			return 0;
 		}
@@ -731,7 +731,7 @@ public abstract class MCTNode {
 
 	public double getMaxSurvivalRate() {
 		if (getTotalMaxVisitCount() > 0) {
-			return maxScores[2] / getTotalMaxVisitCount();
+			return oldMaxScores[2] / getTotalMaxVisitCount();
 		} else {
 			return 0;
 		}
@@ -762,24 +762,24 @@ public abstract class MCTNode {
 	}
 
 	public double getCurrentMaxPillScore() {
-		if (maxCurrentVisitCount > 0) {
-			return maxCurrentScores[0] / maxCurrentVisitCount;
+		if (currentMaxVisitCount > 0) {
+			return currentMaxScores[0] / currentMaxVisitCount;
 		} else {
 			return 0.;
 		}
 	}
 
 	public double getCurrentMaxGhostScore() {
-		if (maxCurrentVisitCount > 0) {
-			return maxCurrentScores[1] / maxCurrentVisitCount;
+		if (currentMaxVisitCount > 0) {
+			return currentMaxScores[1] / currentMaxVisitCount;
 		} else {
 			return 0.;
 		}
 	}
 
 	public double getCurrentMaxSurvivals() {
-		if (maxCurrentVisitCount > 0) {
-			return maxCurrentScores[2] / maxCurrentVisitCount;
+		if (currentMaxVisitCount > 0) {
+			return currentMaxScores[2] / currentMaxVisitCount;
 		} else {
 			return 0.;
 		}
@@ -795,24 +795,24 @@ public abstract class MCTNode {
 	}
 
 	private double getCurrentMaxValue(int i) {
-		if (maxCurrentVisitCount > 0) {
-			return maxCurrentScores[i] / maxCurrentVisitCount;
+		if (currentMaxVisitCount > 0) {
+			return currentMaxScores[i] / currentMaxVisitCount;
 		} else {
 			return 0.;
 		}
 	}
 
 	private double getMaxValue(int i) {
-		if (maxTotalVisitCount > 0) {
-			return maxScores[i] / maxTotalVisitCount;
+		if (oldMaxVisitCount > 0) {
+			return oldMaxScores[i] / oldMaxVisitCount;
 		} else {
 			return 0.;
 		}
 	}
 
 	private double getMeanValue(int i) {
-		if (totalVisitCount > 0) {
-			return meanScores[i] / totalVisitCount;
+		if (oldVisitCount > 0) {
+			return oldScores[i] / oldVisitCount;
 		} else {
 			return 0.;
 		}

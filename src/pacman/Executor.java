@@ -190,7 +190,7 @@ public class Executor {
 			writeOutput("Score \t Lives \t Final level");
 		//
 		for (i = 0; i < trials; i++) {
-			game = new Game(mySeed);
+			game = new Game(System.currentTimeMillis());
 			//
 
 			while (!game.gameOver()) {
@@ -240,7 +240,7 @@ public class Executor {
 
 	public void runGame(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual, int delay) {
-		Game game = new Game(0), debugGame = new Game(0);
+		Game game = new Game(System.currentTimeMillis()), debugGame = new Game(System.currentTimeMillis());
 
 		GameView gv = null;
 
@@ -265,7 +265,7 @@ public class Executor {
 
 	public void runGameTimed(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual) {
-		Game game = new Game(0);
+		Game game = new Game(System.currentTimeMillis());
 
 		GameView gv = null;
 
@@ -300,7 +300,7 @@ public class Executor {
 
 	public void runGameTimedSpeedOptimised(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean fixedTime, boolean visual) {
-		Game game = new Game(0);
+		Game game = new Game(System.currentTimeMillis());
 
 		GameView gv = null;
 
@@ -361,7 +361,7 @@ public class Executor {
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual, String fileName) {
 		StringBuilder replay = new StringBuilder();
 
-		Game game = new Game(0);
+		Game game = new Game(System.currentTimeMillis());
 
 		GameView gv = null;
 
@@ -411,7 +411,7 @@ public class Executor {
 	public void replayGame(String fileName, boolean visual) {
 		ArrayList<String> timeSteps = loadReplay(fileName);
 
-		Game game = new Game(0);
+		Game game = new Game(System.currentTimeMillis());
 
 		GameView gv = null;
 
