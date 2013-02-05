@@ -37,6 +37,8 @@ public class Executor {
 	private static int numTrials = 0;
 	private static boolean printall = false;
 	private static Settings setting = null;
+	private static long seed = -1;
+
 	/**
 	 * The main method. Several options are listed - simply remove comments to use the option you want.
 	 * 
@@ -49,7 +51,7 @@ public class Executor {
 
 		if (args.length == 0) {
 			setting = Settings.getDefaultSetting();
-			
+
 			MyPacMan pm = new MyPacMan();
 			pm.loadSettings(setting);
 			exec.runGame(pm, new Legacy2TheReckoning(), true, Constants.DELAY);
@@ -67,13 +69,19 @@ public class Executor {
 			return;
 		} else if (args[0].equals("?")) {
 			System.out
-					.println("Usage: \n java -jar MsPacMan.jar <output_file> <num_trials> <settings_file> <verbose_output>");
+					.println("Usage: \n java -jar MsPacMan.jar <output_file> <num_trials> <settings_file> <verbose_output> [seed]");
 			return;
 		}
 		//
 		numTrials = Integer.parseInt(args[1]);
 		writeOutput("Running " + numTrials + " games");
 		printall = Boolean.parseBoolean(args[3]);
+		try {
+			Integer.parseInt(args[4]);
+		} catch (NumberFormatException ex) {
+			// No seed
+			seed = -1;
+		}
 		//
 		outFile = args[0];
 		System.out.println("Output goes to: " + outFile);
@@ -91,13 +99,17 @@ public class Executor {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		//		
+		//
 		try {
 			// Super safety ...
-			if ( setting.opponent.toLowerCase().equals("pacman.controllers.examples.legacy2thereckoning")
-					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.ghostbuster.myghosts")
-					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.memetix.myghost")
-					|| setting.opponent.toLowerCase().equals("pacman.opponents.ghosts.eiisolver.myghost")) {
+			if (setting.opponent.toLowerCase().equals(
+					"pacman.controllers.examples.legacy2thereckoning")
+					|| setting.opponent.toLowerCase().equals(
+							"pacman.opponents.ghosts.ghostbuster.myghosts")
+					|| setting.opponent.toLowerCase().equals(
+							"pacman.opponents.ghosts.memetix.myghost")
+					|| setting.opponent.toLowerCase().equals(
+							"pacman.opponents.ghosts.eiisolver.myghost")) {
 				System.out.println("Opponent: " + setting.opponent);
 				ghosts = (Controller<EnumMap<GHOST, MOVE>>) Class.forName(setting.opponent)
 						.newInstance();
@@ -109,29 +121,31 @@ public class Executor {
 		pacman = new MyPacMan();
 		setting.setPropertiesList();
 		loopNextProperty(setting.properties, 0);
-		if(noLoop) { // There was no list of values, we just run the number of tests with the given setting
+		if (noLoop) { // There was no list of values, we just run the number of tests with the given setting
 			pacman.loadSettings(setting);
 			runExperiment(pacman, ghosts, numTrials, printall);
 		}
 	}
+
 	public static boolean noLoop = true;
+
 	public static boolean loopNextProperty(ArrayList<double[]> properties, int index) {
 		// Check for the next property to loop over
-		while(index < properties.size() && properties.get(index).length <= 1) {
+		while (index < properties.size() && properties.get(index).length <= 1) {
 			index++;
 		}
 		// Check if we're not at the end
-		if(index < properties.size()) {
+		if (index < properties.size()) {
 			double[] prop = properties.get(index);
 			// Needed to reset it later
 			double firstVal = prop[0];
 			String name = Settings.class.getFields()[index].getName();
-			for(int i = 0; i < prop.length; i++) {
+			for (int i = 0; i < prop.length; i++) {
 				// Always place the property to test at the start of the list
 				prop[0] = prop[i];
 				writeOutput(name + " value: " + prop[i]);
 				//
-				if(!loopNextProperty(properties, index + 1)) {
+				if (!loopNextProperty(properties, index + 1)) {
 					pacman.loadSettings(setting);
 					runExperiment(pacman, ghosts, numTrials, printall);
 					noLoop = false;
@@ -163,8 +177,11 @@ public class Executor {
 		double avgScore = 0, maxScore = 0, minScore = Double.POSITIVE_INFINITY, S;
 		int[] values = new int[trials];
 		long due;
-		Random rnd = new Random(0);
-		XSRandom.r.setSeed(0);
+		long mySeed = System.currentTimeMillis();
+		if(seed >= 0) {
+			mySeed = seed;
+		}
+		XSRandom.r.setSeed(mySeed);
 		Game game;
 		//
 		int i = 0, realTrials = 0, avgLives = 0, avgMaze = 0;
@@ -173,7 +190,7 @@ public class Executor {
 			writeOutput("Score \t Lives \t Final level");
 		//
 		for (i = 0; i < trials; i++) {
-			game = new Game(rnd.nextLong());
+			game = new Game(mySeed);
 			//
 
 			while (!game.gameOver()) {
@@ -229,7 +246,6 @@ public class Executor {
 
 		if (visual)
 			gv = new GameView(game).showGame();
-
 		while (!game.gameOver()) {
 			game.advanceGame(
 					pacManController.getMove(game.copy(), System.currentTimeMillis() + delay),
