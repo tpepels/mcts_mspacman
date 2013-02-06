@@ -30,7 +30,7 @@ public class Settings {
 
 	// On/off settings for disabling certain enhancements
 	public boolean tree_reuse, tree_decay, tree_var_depth, strategic_playout, last_good_config,
-			enable_trailghost;
+			enable_trailghost, max_selection;
 	// Different opponents
 	public String opponent;
 	//
@@ -39,10 +39,10 @@ public class Settings {
 	public static Settings getDefaultSetting() {
 		Settings defSettings = new Settings();
 		//
-		defSettings.maxPathLength[0] = 70;
-		defSettings.maxSimulations[0] = 40;
+		defSettings.maxPathLength[0] = 80;
+		defSettings.maxSimulations[0] = 50;
 		//
-		defSettings.safetyT[0] = .72;
+		defSettings.safetyT[0] = .73;
 		defSettings.ghostSelectScore[0] = .5;
 		defSettings.reversePenalty[0] = .8;
 		defSettings.discount[0] = .5;
@@ -65,6 +65,7 @@ public class Settings {
 		defSettings.strategic_playout = true;
 		defSettings.last_good_config = true;
 		defSettings.enable_trailghost = true;
+		defSettings.max_selection = true;
 		//
 		defSettings.opponent = "pacman.controllers.examples.Legacy2TheReckoning";
 		return defSettings;

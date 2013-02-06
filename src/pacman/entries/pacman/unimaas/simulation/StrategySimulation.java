@@ -472,12 +472,13 @@ public class StrategySimulation {
 		// Determine the pill-score
 		if (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT) {
 			pillNorm = 1.;
-		} else if (pwrPillsBefore <= gameState.getNumberOfActivePowerPills()
-				&& (pillsEaten > 0 || edgePillsEaten > 0)
-				&& selectionType != SelectionType.GhostScore) {
+		} else if (pillsEaten > 0 || edgePillsEaten > 0) {
 			//
 			pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
 		}
+		//
+		if(pwrPillsBefore > gameState.getNumberOfActivePowerPills())
+			pillNorm *= .1;
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
 			if (ghostDivisor == 0) {

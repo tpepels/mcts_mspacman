@@ -26,6 +26,7 @@ public class MyPacMan extends Controller<MOVE> {
 	// penalties and discounts
 	private double reversePenalty; // The reward penalty for selecting a reverse move
 	private double discount; // Decay factor for the tree decay
+	private boolean maxSelection = false;
 	//
 	private boolean atJunction = false, prevLocationWasJunction = false;
 	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
@@ -72,6 +73,7 @@ public class MyPacMan extends Controller<MOVE> {
 		reuse = setting.tree_reuse;
 		var_depth = setting.tree_var_depth;
 		strategic_playout = setting.strategic_playout;
+		maxSelection = setting.max_selection;
 	}
 
 	@Override
@@ -94,7 +96,7 @@ public class MyPacMan extends Controller<MOVE> {
 		} else {
 			root.propagateMaxValues(SelectionType.SurvivalRate);
 			// Remember the previous safety rate
-			prevMoveSurvivalRate = root.getAlphaSurvivalScore();
+			prevMoveSurvivalRate = root.getAlphaSurvivalScore(true);
 			// Check if safe enough to make a rewarding move.
 			if (prevMoveSurvivalRate < safetyT) {
 				selectionType = SelectionType.SurvivalRate;
@@ -102,7 +104,7 @@ public class MyPacMan extends Controller<MOVE> {
 				// Check if we should go for the ghosts
 				root.propagateMaxValues(SelectionType.GhostScore, safetyT);
 				for (MCTNode c : root.getChildren()) {
-					if (c.getAlphaGhostScore() >= ghostSelectScore) {
+					if (c.getAlphaGhostScore(true) >= ghostSelectScore) {
 						selectionType = SelectionType.GhostScore;
 					}
 				}
@@ -375,16 +377,16 @@ public class MyPacMan extends Controller<MOVE> {
 			double score = 0.f;
 			if (selectionType == SelectionType.GhostScore) {
 				// Don't consider unsafe children
-				if (c.getAlphaSurvivalScore() < safetyT) {
+				if (c.getAlphaSurvivalScore(maxSelection) < safetyT) {
 					continue;
 				}
-				score = c.getAlphaGhostScore();
+				score = c.getAlphaGhostScore(maxSelection);
 			} else if (selectionType == SelectionType.PillScore) {
 				// Don't consider unsafe children
-				if (c.getAlphaSurvivalScore() < safetyT) {
+				if (c.getAlphaSurvivalScore(maxSelection) < safetyT) {
 					continue;
 				}
-				score = c.getAlphaPillScore();
+				score = c.getAlphaPillScore(maxSelection);
 			}
 			// Give a penalty to the score if it reverses ms pac-man
 			if (c.getPathDirection().opposite() == gameState.getPacmanLastMoveMade()
@@ -394,7 +396,7 @@ public class MyPacMan extends Controller<MOVE> {
 			// Don't punish survival-based selection, even if reversed
 			if (selectionType == SelectionType.SurvivalRate) {
 				// For maximum selection
-				score = c.getAlphaSurvivalScore();
+				score = c.getAlphaSurvivalScore(maxSelection);
 			}
 			// Remember the highest score seen and the node that came with it
 			if (score > maxScore) {
@@ -443,7 +445,7 @@ public class MyPacMan extends Controller<MOVE> {
 			simulations++;
 			//
 			root.addVisit();
-			expandNode = root.selection(selection, true, maxPathLength);
+			expandNode = root.selection(selection, maxSelection, maxPathLength);
 			simulationNode = expandNode;
 
 			// Check if the expandnode can be expanded

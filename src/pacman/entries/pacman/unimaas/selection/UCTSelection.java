@@ -49,12 +49,11 @@ public class UCTSelection implements MCTSelection {
 					val_new = c.getNewMeanValue(MCTNode.SURV_I);
 				}
 			}
-			
-			// check the number of visits PER TURN!
+			//
 			if (c.newVisitCount < minVisits) {
 				// Give an unvisited node a high value s.t. it is selected.
 				uctValue = 100.0 + (XSRandom.r.nextDouble() * 10.0);
-			} else if (c.oldVisitCount >= 1.) {
+			} else if (c.oldVisitCount >= minVisits) {
 				uctValue = alpha
 						* (val_old + C * Math.sqrt(Math.log(P.oldVisitCount) / c.oldVisitCount))
 						+ (1. - alpha)
@@ -63,7 +62,8 @@ public class UCTSelection implements MCTSelection {
 				// we did not see this node in previous searches, use normal uct.
 				uctValue = val_new + C * Math.sqrt(Math.log(P.newVisitCount) / c.newVisitCount);
 			}
-			if(Double.isNaN(uctValue))
+
+			if (Double.isNaN(uctValue))
 				System.err.println("wtf");
 			// Select the highest value
 			if (uctValue > bestValue) {
