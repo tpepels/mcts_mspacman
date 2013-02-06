@@ -26,7 +26,7 @@ public class MyPacMan extends Controller<MOVE> {
 	// penalties and discounts
 	private double reversePenalty; // The reward penalty for selecting a reverse move
 	private double discount; // Decay factor for the tree decay
-	private boolean maxSelection = false;
+	private boolean maxSelection;
 	//
 	private boolean atJunction = false, prevLocationWasJunction = false;
 	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
