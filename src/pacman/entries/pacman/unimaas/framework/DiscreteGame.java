@@ -101,7 +101,7 @@ public class DiscreteGame {
 		}
 		highestEdgeId[gameState.getMazeIndex()] = id;
 		currentEdges[gameState.getMazeIndex()] = new Edge[id];
-		currentEdges[gameState.getMazeIndex()] = allEdges.toArray(currentEdges[0]);
+		currentEdges[gameState.getMazeIndex()] = allEdges.toArray(currentEdges[gameState.getMazeIndex()]);
 		return jn;
 	}
 

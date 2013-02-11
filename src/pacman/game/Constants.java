@@ -89,7 +89,7 @@ public final class Constants {
 	public static final int DELAY = 40; // delay (in milliseconds) between game advancements
 	// For real dawg
 	public static final int NUM_LIVES = 3; // total number of lives Ms Pac-Man has (current + NUM_LIVES-1 spares)
-	public static final int EXTRA_LIFE_SCORE = 10000; // extra life is awarded when this many points have been collected
+	 public static final int EXTRA_LIFE_SCORE = 10000; // extra life is awarded when this many points have been collected
 	// For testing
 	// public static final int NUM_LIVES = 1; // total number of lives Ms Pac-Man has (current + NUM_LIVES-1 spares)
 	// public static final int EXTRA_LIFE_SCORE=1000000; //extra life is awarded when this many points have been

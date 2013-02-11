@@ -31,7 +31,7 @@ public class StrategySimulation {
 	// !DEBUG
 	//
 	public final int numPills[] = { 220, 240, 238, 234 };
-	public static int minSteps = 1;
+	public static int minSteps = 2;
 	public static double pillPower = 1.2;
 	public static boolean trailGhost = false;
 	// public static double sminGhostNorm = .4;
@@ -72,18 +72,224 @@ public class StrategySimulation {
 	//
 	public double gameCount, deathCount;
 
-	//
-	// public StrategySimulation() {
-	// this.minGhostNorm = StrategySimulation.sminGhostNorm;
-	// }
+	public MCTResult playout(DiscreteGame discreteGame, Game state, MOVE[] pathMoves,
+			int[] pacLocations, int maxSims, int pathLength, SelectionType selectionType, boolean strategic) {
+		//
+		this.selectionType = selectionType;
+		gameState = state;
+		dGame = discreteGame;
+		maxSimulations = maxSims;
+		ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS];
+		ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
+		ghostJunctions = new int[Constants.NUM_GHOSTS];
+		ghostMoves.clear();
+		gameCount++;
+		//
+		tempDGame = null;
+		tempGame = null;
 
-	// public void setDecreasedMinGhostNorm() {
-	// this.minGhostNorm = StrategySimulation.hardMinGhostNorm;
-	// }
-	//
-	// public void setEasyMinGhostNorm() {
-	// this.minGhostNorm = StrategySimulation.easyMinGhostNorm;
-	// }
+		// TODO DEBUG
+		// debugGameState = null;
+		// debugDGameState = null;
+		// if (XSRandom.r.nextInt(1000) <= 2) {
+		// gv = new GameView(gameState).showGame();
+		// }
+
+		pacLocation = gameState.getPacmanCurrentNodeIndex();
+		if (strategic) {
+			ghostMover = new PinchGhostMover(gameState, dGame);
+		} else {
+			ghostMover = new AggressiveGhosts(gameState);
+		}
+
+		// Set the targets for the ghosts
+		if (trailGhost) {
+
+			if (!lastGoodTG || !last_good_config) {
+				lastGoodTrailGhost = XSRandom.r.nextInt(Constants.NUM_GHOSTS);
+			}
+
+			((PinchGhostMover) ghostMover).setTrailGhost(lastGoodTrailGhost);
+		} else {
+
+			if (!lastGoodTv || !last_good_config) {
+				for (int i = 0; i < Constants.NUM_GHOSTS; i++) {
+					ghostVector[i] = XSRandom.r.nextBoolean();
+				}
+			}
+
+			((PinchGhostMover) ghostMover).setTargetVector(ghostVector);
+		}
+		//
+		if (strategic) {
+			pacManMover = new PacManMover(gameState, dGame);
+		} else {
+			pacManMover = new RandomNonRevPacMan(gameState);
+		}
+		// Set the pre-game variables, these will be used for scoring later
+		// pillsBefore = gameState.getNumberOfActivePills();
+		pillsBefore = numPills[gameState.getMazeIndex()];
+		mazeBefore = gameState.getMazeIndex();
+		pwrPillsBefore = gameState.getNumberOfActivePowerPills();
+		//
+		double ghostDivisor = 0.;
+		// The edibletimes for the ghosts at the start of the simulation
+		for (GHOST g : GHOST.values()) {
+			// Remember if a ghost was edible for scoring using edible times
+			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
+				ghostDivisor += gameState.getGhostEdibleTime(g);
+			}
+		}
+
+		// Reset the scoring values
+		pillsEaten = 0;
+		edgePillsEaten = 0;
+		tempPills = 0;
+		tempGhosts = 0;
+		tempMaxSim = 0;
+		ghostsEaten = 0;
+		//
+		nextMaze = false;
+		ateGhost = false;
+		atePower = false;
+		illegalPP = false;
+		died = false;
+
+		// First follow the path to the position represented by the node
+		followingPath = true;
+		int i = 0, steps = 0, destination;
+		tempGame = null;
+		tempDGame = null;
+		treePhase = 0;
+		for (i = pathMoves.length - 1; i >= 0; i--) {
+			// Execute the first path-move to determine a direction
+			pacMove = pathMoves[i];
+			//
+			advanceGame();
+			treePhase++;
+			pathLength--;
+			//
+			if (died || nextMaze || ateGhost || atePower || illegalPP || pathLength == 0) {
+				break;
+			}
+			//
+			if (i < 0) {
+				destination = dGame.getPacHeading();
+			} else {
+				destination = pacLocations[i];
+			}
+			//
+			steps++;
+			//
+			if (steps >= minSteps) {
+				tempPills = pillsEaten;
+				tempGhosts = ghostsEaten;
+				tempMaxSim = pathLength;
+				tempDGame = dGame.copy();
+				tempGame = gameState.copy();
+			}
+			// If there is a power-pill on the current edge, stop following path
+			if (dGame.getCurrentPacmanEdge() != null && selectionType == SelectionType.GhostScore) {
+				if (dGame.getCurrentPacmanEdge().powerPill) {
+					if (gameState
+							.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
+						break;
+					}
+				}
+			}
+			// Follow the chosen path!
+			while (pacLocation != destination) {
+				pacMove = gameState
+						.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0];
+				//
+				advanceGame();
+				pathLength--;
+				//
+				if (died || nextMaze || ateGhost || atePower || illegalPP || pathLength == 0) {
+					break;
+				}
+			}
+			//
+			if (died || nextMaze || ateGhost || atePower || illegalPP || pathLength == 0) {
+				break;
+			}
+		}
+		//
+		if (died && steps > minSteps) {
+			maxSimulations = tempMaxSim + maxSims;
+			pillsEaten = tempPills;
+			ghostsEaten = tempGhosts;
+			currentEdgesVisited = tempDGame.getVisitedEdgeCount();
+			pacLocation = tempGame.getPacmanCurrentNodeIndex();
+			gameState = tempGame;
+			dGame = tempDGame;
+			died = false;
+			pacManMover = new PacManMover(gameState, dGame);
+			ghostMover = new PinchGhostMover(gameState, dGame);
+			CauseOfDeath.redo++;
+			//
+		} else if (died) {
+			CauseOfDeath.tree++;
+		}
+		// Playout phase
+		if (!died && !nextMaze && !illegalPP) {
+			followingPath = false;
+			for (int j = 0; j < maxSimulations; j++) {
+				advanceGame();
+				//
+				if (nextMaze || died || illegalPP) {
+					break;
+				}
+			}
+		}
+		//
+		if (!died) {
+			//
+			// If pacman is trapped in the current path, death.
+			died = pacManTrapped();
+			if (died) {
+				CauseOfDeath.trapped++;
+			}
+			//
+		} else if (!followingPath) {
+			//
+			CauseOfDeath.simulation++;
+		}
+		//
+		if (died) {
+			deathCount++;
+			//
+			lastGoodTG = true;
+			lastGoodTv = true;
+		} else {
+			lastGoodTG = false;
+			lastGoodTv = false;
+		}
+		pillNorm = .0;
+		ghostNorm = .0;
+		// Determine the pill-score
+		if (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT) {
+			pillNorm = 1.;
+		} else if ((pillsEaten > 0 || edgePillsEaten > 0) && pillsBefore > 0) {
+			//
+			pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
+		}
+		//
+		if (pwrPillsBefore > gameState.getNumberOfActivePowerPills())
+			pillNorm *= .2;
+		// Determine the ghost score
+		if (ghostsEaten > 0) {
+			if (ghostDivisor == 0) {
+				// Mathemagics!!
+				ghostDivisor = Constants.NUM_GHOSTS
+						* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
+								gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
+			}
+			//
+			ghostNorm = ghostsEaten / ghostDivisor;
+		}
+		return new MCTResult(pillNorm, ghostNorm, !died);
+	}
 
 	/**
 	 * The number of steps that were made in the tree-phase.
@@ -113,7 +319,7 @@ public class StrategySimulation {
 				try {
 					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
 				} catch (Exception ex) {
-					// System.err.println("Ghost on wrong edge in simulation.");
+					System.err.println("Ghost on wrong edge in simulation.");
 				}
 			}
 			// Reset the ghost statuses
@@ -143,7 +349,7 @@ public class StrategySimulation {
 		if (!followingPath) { // If this is the case, pacmove is predetermined
 			pacMove = pacManMover.generatePacManMove(selectionType);
 		}
-		gameState.advanceGame(pacMove, ghostMoves);
+		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMoves);
 
 		// Check if pacman died this turn
 		died = gameState.wasPacManEaten();
@@ -270,226 +476,5 @@ public class StrategySimulation {
 			}
 		}
 		return frontBlocked && rearBlocked;
-	}
-
-	public MCTResult playout(DiscreteGame discreteGame, Game state, MOVE[] pathMoves,
-			int[] pacLocations, int maxSims, SelectionType selectionType, boolean strategic) {
-		//
-		this.selectionType = selectionType;
-		gameState = state;
-		dGame = discreteGame;
-		maxSimulations = maxSims;
-		ghostsAtJunctions = new boolean[Constants.NUM_GHOSTS];
-		ghostsAtInitial = new boolean[Constants.NUM_GHOSTS];
-		ghostJunctions = new int[Constants.NUM_GHOSTS];
-		ghostMoves.clear();
-		gameCount++;
-		//
-		tempDGame = null;
-		tempGame = null;
-
-		// TODO DEBUG
-		// debugGameState = null;
-		// debugDGameState = null;
-		// if (XSRandom.r.nextInt(1000) <= 2) {
-		// gv = new GameView(gameState).showGame();
-		// }
-
-		pacLocation = gameState.getPacmanCurrentNodeIndex();
-		if (strategic) {
-			ghostMover = new PinchGhostMover(gameState, dGame);
-		} else {
-			ghostMover = new AggressiveGhosts(gameState);
-		}
-
-		// Set the targets for the ghosts
-		if (trailGhost) {
-
-			if (!lastGoodTG || !last_good_config) {
-				lastGoodTrailGhost = XSRandom.r.nextInt(Constants.NUM_GHOSTS);
-			}
-
-			((PinchGhostMover) ghostMover).setTrailGhost(lastGoodTrailGhost);
-		} else {
-
-			if (!lastGoodTv || !last_good_config) {
-				for (int i = 0; i < Constants.NUM_GHOSTS; i++) {
-					ghostVector[i] = XSRandom.r.nextBoolean();
-				}
-			}
-
-			((PinchGhostMover) ghostMover).setTargetVector(ghostVector);
-		}
-		//
-		if (strategic) {
-			pacManMover = new PacManMover(gameState, dGame);
-		} else {
-			pacManMover = new RandomNonRevPacMan(gameState);
-		}
-		// Set the pre-game variables, these will be used for scoring later
-		// pillsBefore = gameState.getNumberOfActivePills();
-		pillsBefore = numPills[gameState.getMazeIndex()];
-		mazeBefore = gameState.getMazeIndex();
-		pwrPillsBefore = gameState.getNumberOfActivePowerPills();
-		//
-		double ghostDivisor = 0.;
-		// The edibletimes for the ghosts at the start of the simulation
-		for (GHOST g : GHOST.values()) {
-			// Remember if a ghost was edible for scoring using edible times
-			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
-				ghostDivisor += gameState.getGhostEdibleTime(g);
-			}
-		}
-
-		// Reset the scoring values
-		pillsEaten = 0;
-		edgePillsEaten = 0;
-		tempPills = 0;
-		tempGhosts = 0;
-		tempMaxSim = 0;
-		ghostsEaten = 0;
-		//
-		nextMaze = false;
-		ateGhost = false;
-		atePower = false;
-		illegalPP = false;
-		died = false;
-
-		// First follow the path to the position represented by the node
-		followingPath = true;
-		int i = 0, steps = 0, destination;
-		tempGame = null;
-		tempDGame = null;
-		treePhase = 0;
-		for (i = pathMoves.length - 1; i >= 0; i--) {
-			// Execute the first path-move to determine a direction
-			pacMove = pathMoves[i];
-			//
-			advanceGame();
-			treePhase++;
-			maxSimulations--;
-			//
-			if (died || nextMaze || ateGhost || atePower || illegalPP) {
-				break;
-			}
-			//
-			if (i < 0) {
-				destination = dGame.getPacHeading();
-			} else {
-				destination = pacLocations[i];
-			}
-			//
-			steps++;
-			//
-			if (steps > minSteps) {
-				tempPills = pillsEaten;
-				tempGhosts = ghostsEaten;
-				tempMaxSim = maxSimulations;
-				tempDGame = dGame.copy();
-				tempGame = gameState.copy();
-			}
-			// If there is a power-pill on the current edge, stop following path
-			if (dGame.getCurrentPacmanEdge() != null && selectionType == SelectionType.GhostScore) {
-				if (dGame.getCurrentPacmanEdge().powerPill) {
-					if (gameState
-							.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
-						break;
-					}
-				}
-			}
-			// Follow the chosen path!
-			while (pacLocation != destination) {
-				pacMove = gameState
-						.getPossibleMoves(pacLocation, gameState.getPacmanLastMoveMade())[0];
-				//
-				advanceGame();
-				maxSimulations--;
-				//
-				if (died || nextMaze || ateGhost || atePower || illegalPP) {
-					break;
-				}
-			}
-			//
-			if (died || nextMaze || ateGhost || atePower || illegalPP) {
-				break;
-			}
-		}
-		//
-		if (died && steps > minSteps) {
-			maxSimulations = tempMaxSim;
-			pillsEaten = tempPills;
-			ghostsEaten = tempGhosts;
-			currentEdgesVisited = tempDGame.getVisitedEdgeCount();
-			pacLocation = tempGame.getPacmanCurrentNodeIndex();			
-			gameState = tempGame;
-			dGame = tempDGame;
-			died = false;
-			pacManMover = new PacManMover(gameState, dGame);
-			ghostMover = new PinchGhostMover(gameState, dGame);
-			CauseOfDeath.redo++;
-			//
-		} else if (died) {
-			CauseOfDeath.tree++;
-		}
-		// Playout phase
-		if (!died && !nextMaze && !illegalPP) {
-			followingPath = false;
-			for (int j = 0; j < maxSimulations; j++) {
-				advanceGame();
-				//
-				if (nextMaze || died || illegalPP) {
-					break;
-				}
-			}
-		}
-		//
-		if (!died) {
-			//
-			// If pacman is trapped in the current path, death.
-			died = pacManTrapped();
-			if (died) {
-				CauseOfDeath.trapped++;
-			}
-			//
-		} else if (!followingPath) {
-			//
-			CauseOfDeath.simulation++;
-		}
-		//
-		if (died) {
-			deathCount++;
-			//
-			lastGoodTG = true;
-			lastGoodTv = true;
-		} else {
-			lastGoodTG = false;
-			lastGoodTv = false;
-		}
-
-		//
-		pillNorm = .0;
-		ghostNorm = .0;
-		// Determine the pill-score
-		if (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT) {
-			pillNorm = 1.;
-		} else if (pillsEaten > 0 || edgePillsEaten > 0) {
-			//
-			pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
-		}
-		//
-		if(pwrPillsBefore > gameState.getNumberOfActivePowerPills())
-			pillNorm *= .1;
-		// Determine the ghost score
-		if (ghostsEaten > 0) {
-			if (ghostDivisor == 0) {
-				// Mathemagics!!
-				ghostDivisor = Constants.NUM_GHOSTS
-						* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
-								gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
-			}
-			//
-			ghostNorm = ghostsEaten / ghostDivisor;
-		}
-		return new MCTResult(pillNorm, ghostNorm, !died);
 	}
 }

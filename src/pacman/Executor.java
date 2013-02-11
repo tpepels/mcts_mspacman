@@ -76,11 +76,14 @@ public class Executor {
 		numTrials = Integer.parseInt(args[1]);
 		writeOutput("Running " + numTrials + " games");
 		printall = Boolean.parseBoolean(args[3]);
-		try {
-			Integer.parseInt(args[4]);
-		} catch (NumberFormatException ex) {
-			// No seed
-			seed = -1;
+
+		if (args.length >= 5) {
+			try {
+				Integer.parseInt(args[4]);
+			} catch (NumberFormatException ex) {
+				// No seed
+				seed = -1;
+			}
 		}
 		//
 		outFile = args[0];
@@ -178,7 +181,7 @@ public class Executor {
 		int[] values = new int[trials];
 		long due;
 		long mySeed = System.currentTimeMillis();
-		if(seed >= 0) {
+		if (seed >= 0) {
 			mySeed = seed;
 		}
 		XSRandom.r.setSeed(mySeed);
@@ -240,7 +243,8 @@ public class Executor {
 
 	public void runGame(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual, int delay) {
-		Game game = new Game(System.currentTimeMillis()), debugGame = new Game(System.currentTimeMillis());
+		Game game = new Game(System.currentTimeMillis(), 0), debugGame = new Game(
+				System.currentTimeMillis());
 
 		GameView gv = null;
 

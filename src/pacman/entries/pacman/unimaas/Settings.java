@@ -39,13 +39,13 @@ public class Settings {
 	public static Settings getDefaultSetting() {
 		Settings defSettings = new Settings();
 		//
-		defSettings.maxPathLength[0] = 80;
-		defSettings.maxSimulations[0] = 50;
+		defSettings.maxPathLength[0] = 70;
+		defSettings.maxSimulations[0] = 40;
 		//
 		defSettings.safetyT[0] = .73;
 		defSettings.ghostSelectScore[0] = .5;
 		defSettings.reversePenalty[0] = .8;
-		defSettings.discount[0] = .5;
+		defSettings.discount[0] = .7;
 		//
 		defSettings.uctC[0] = .9;
 		defSettings.minVisits[0] = 10;
@@ -56,15 +56,15 @@ public class Settings {
 		defSettings.pacEpsilon[0] = .7;
 		defSettings.ghostEpsilon[0] = .7;
 		//
-		defSettings.alpha_pill[0] = .5;
-		defSettings.alpha_ghosts[0] = .5;
+		defSettings.alpha_pill[0] = .6;
+		defSettings.alpha_ghosts[0] = .2;
 		//
 		defSettings.tree_reuse = true;
 		defSettings.tree_decay = true;
 		defSettings.tree_var_depth = true;
 		defSettings.strategic_playout = true;
 		defSettings.last_good_config = true;
-		defSettings.enable_trailghost = true;
+		defSettings.enable_trailghost = false;
 		defSettings.max_selection = true;
 		//
 		defSettings.opponent = "pacman.controllers.examples.Legacy2TheReckoning";

@@ -131,7 +131,7 @@ public abstract class MCTNode {
 			}
 			// The children didn't have enough visits compared to this node,
 			// therefore don't use their values to back-propagate
-			if ((childrenVCount / newVisitCount) < minChildVisitRate) {
+			if (childrenVCount / newVisitCount < minChildVisitRate) {
 				node.oldMaxScores = node.oldScores;
 				node.newMaxScores = node.newScores;
 				//
@@ -140,7 +140,6 @@ public abstract class MCTNode {
 				node = node.getParent();
 				continue;
 			}
-
 			node.oldMaxScores = topChild.oldMaxScores;
 			node.newMaxScores = topChild.newMaxScores;
 			//
@@ -162,7 +161,7 @@ public abstract class MCTNode {
 				}
 				c.propagateMaxValues(selectionType);
 			}
-			// The children didn't have enough visits compared to this node.
+			// // The children didn't have enough visits compared to this node.
 			if (childrenVCount / newVisitCount < minChildVisitRate) {
 				oldMaxScores = oldScores;
 				newMaxScores = newScores;
@@ -216,7 +215,6 @@ public abstract class MCTNode {
 
 	public void propagateMaxValues(SelectionType selectionType, double minRate) {
 		if (!isLeaf()) {
-			//
 			double childrenVCount = 0.;
 			for (MCTNode c : children) {
 				childrenVCount += c.newVisitCount;
@@ -292,7 +290,7 @@ public abstract class MCTNode {
 			if (newVisitCount < UCTSelection.minVisits) {
 				return false;
 			}
-			// Enforce the max pathlength rule
+			// Enforce the max path length rule
 			if (variable_depth && getPathLength() > maxPathLength) {
 				return false;
 			}
@@ -300,7 +298,7 @@ public abstract class MCTNode {
 			if (!variable_depth && depth > maxNodeDepth) {
 				return false;
 			}
-			return true;
+			return isLeaf();
 		}
 		// The root-node can always be expanded
 		return true;
@@ -390,12 +388,11 @@ public abstract class MCTNode {
 		oldScores[PILL_I] += newScores[PILL_I];
 		oldScores[GHOST_I] += newScores[GHOST_I];
 		oldScores[SURV_I] += newScores[SURV_I];
+		oldVisitCount += newVisitCount;
 		//
 		oldScores[PILL_I] *= discount;
 		oldScores[GHOST_I] *= discount;
 		oldScores[SURV_I] *= discount;
-		//
-		oldVisitCount += newVisitCount;
 		oldVisitCount *= discount;
 		// Reset the maximum scores, they should be reset later.
 		oldMaxScores = new double[3];
@@ -411,6 +408,148 @@ public abstract class MCTNode {
 			for (MCTNode c : children) {
 				c.discountValues(discount);
 			}
+		}
+	}
+
+	public void copyStats(MCTNode node2) {
+		System.arraycopy(node2.newMaxScores, 0, newMaxScores, 0, newMaxScores.length);
+		System.arraycopy(node2.newScores, 0, newScores, 0, newScores.length);
+		System.arraycopy(node2.oldMaxScores, 0, oldMaxScores, 0, oldMaxScores.length);
+		System.arraycopy(node2.oldScores, 0, oldScores, 0, oldScores.length);
+		//
+		oldMaxVisitCount = node2.oldMaxVisitCount;
+		oldVisitCount = node2.oldVisitCount;
+		//
+		newMaxVisitCount = node2.newMaxVisitCount;
+		newVisitCount = node2.newVisitCount;
+	}
+
+	public void substractStats(MCTNode node2) {
+		// Substract the stats from the node.
+		oldVisitCount -= node2.oldVisitCount;
+		newVisitCount -= node2.newVisitCount;
+		//
+		oldScores[PILL_I] -= node2.oldScores[PILL_I];
+		oldScores[GHOST_I] -= node2.oldScores[GHOST_I];
+		oldScores[SURV_I] -= node2.oldScores[SURV_I];
+		//
+		newScores[PILL_I] -= node2.newScores[PILL_I];
+		newScores[GHOST_I] -= node2.newScores[GHOST_I];
+		newScores[SURV_I] -= node2.newScores[SURV_I];
+	}
+
+	public void addStats(MCTNode node2) {
+		// Add the stats from the node.
+		oldVisitCount += node2.oldVisitCount;
+		newVisitCount += node2.newVisitCount;
+		//
+		oldScores[PILL_I] += node2.oldScores[PILL_I];
+		oldScores[GHOST_I] += node2.oldScores[GHOST_I];
+		oldScores[SURV_I] += node2.oldScores[SURV_I];
+		//
+		newScores[PILL_I] += node2.newScores[PILL_I];
+		newScores[GHOST_I] += node2.newScores[GHOST_I];
+		newScores[SURV_I] += node2.newScores[SURV_I];
+	}
+
+	int[] pacLocations;
+	MOVE[] moves;
+
+	/**
+	 * Does a simulation using the rootnode's game state followed by actions up to this node's position
+	 * 
+	 * @param simulation
+	 *            The simulation-class to use for simulating the playout
+	 */
+	public MCTResult simulate(StrategySimulation simulation, int simCount, int pathLength,
+			SelectionType selectionType, boolean strategic) {
+		// Do a simulation starting at the root's game state
+		selectedNode = this;
+		pacLocations = new int[selectedNode.depth + 1];
+		moves = new MOVE[selectedNode.depth];
+		int i = 0;
+		while (!selectedNode.isRoot()) {
+			moves[i] = selectedNode.getPathDirection();
+			pacLocations[i] = selectedNode.getJunctionIndex();
+			i++;
+			selectedNode = selectedNode.getParent();
+		}
+		if (selectedNode.junctionIndex > -1) {
+			pacLocations[i] = selectedNode.getJunctionIndex();
+		}
+		// Get the root's game states
+		Game interState = selectedNode.getGameState().copy();
+		DiscreteGame disGame = selectedNode.getdGame().copy();
+		//
+		return simulation.playout(disGame, interState, moves, pacLocations, simCount, pathLength,
+				selectionType, strategic);
+	}
+
+	public double getAlphaSurvivalScore(boolean max) {
+		if (max) {
+			return UCTSelection.alpha_ps * getOldMaxValue(SURV_I) + (1. - UCTSelection.alpha_ps)
+					* getNewMaxValue(SURV_I);
+		} else {
+			return UCTSelection.alpha_ps * getOldMeanValue(SURV_I) + (1. - UCTSelection.alpha_ps)
+					* getNewMeanValue(SURV_I);
+		}
+	}
+
+	public double getAlphaPillScore(boolean max) {
+		if (max) {
+			return UCTSelection.alpha_ps * getOldMaxValue(PILL_I) * getOldMaxValue(SURV_I)
+					+ (1. - UCTSelection.alpha_ps) * getNewMaxValue(PILL_I)
+					* getNewMaxValue(SURV_I);
+		} else {
+			return UCTSelection.alpha_ps * getOldMeanValue(PILL_I) * getOldMeanValue(SURV_I)
+					+ (1. - UCTSelection.alpha_ps) * getNewMeanValue(PILL_I)
+					* getNewMeanValue(SURV_I);
+		}
+	}
+
+	public double getAlphaGhostScore(boolean max) {
+		if (max) {
+			return (UCTSelection.alpha_g * getOldMaxValue(GHOST_I) + (1. - UCTSelection.alpha_g)
+					* getNewMaxValue(GHOST_I))
+					* getAlphaSurvivalScore(max);
+
+		} else {
+			return (UCTSelection.alpha_g * getOldMeanValue(GHOST_I) + (1. - UCTSelection.alpha_g)
+					* getNewMeanValue(GHOST_I))
+					* getAlphaSurvivalScore(max);
+		}
+	}
+
+	// These are helper functions to get info from the reward vectors by index
+	public double getNewMeanValue(int i) {
+		if (newVisitCount > 0) {
+			return newScores[i] / newVisitCount;
+		} else {
+			return 0.;
+		}
+	}
+
+	public double getNewMaxValue(int i) {
+		if (newMaxVisitCount > 0) {
+			return newMaxScores[i] / newMaxVisitCount;
+		} else {
+			return 0.;
+		}
+	}
+
+	public double getOldMaxValue(int i) {
+		if (oldMaxVisitCount > 0) {
+			return oldMaxScores[i] / oldMaxVisitCount;
+		} else {
+			return 0.;
+		}
+	}
+
+	public double getOldMeanValue(int i) {
+		if (oldVisitCount > 0) {
+			return oldScores[i] / oldVisitCount;
+		} else {
+			return 0.;
 		}
 	}
 
@@ -488,84 +627,8 @@ public abstract class MCTNode {
 		this.children = children;
 	}
 
-	public void copyStats(MCTNode node2) {
-		System.arraycopy(node2.newMaxScores, 0, newMaxScores, 0, newMaxScores.length);
-		System.arraycopy(node2.newScores, 0, newScores, 0, newScores.length);
-		System.arraycopy(node2.oldMaxScores, 0, oldMaxScores, 0, oldMaxScores.length);
-		System.arraycopy(node2.oldScores, 0, oldScores, 0, oldScores.length);
-		//
-		oldMaxVisitCount = node2.oldMaxVisitCount;
-		oldVisitCount = node2.oldVisitCount;
-		//
-		newMaxVisitCount = node2.newMaxVisitCount;
-		newVisitCount = node2.newVisitCount;
-	}
-
-	public void substractStats(MCTNode node2) {
-		// Substract the stats from the node.
-		oldVisitCount -= node2.oldVisitCount;
-		newVisitCount -= node2.newVisitCount;
-		//
-		oldScores[PILL_I] -= node2.oldScores[PILL_I];
-		oldScores[GHOST_I] -= node2.oldScores[GHOST_I];
-		oldScores[SURV_I] -= node2.oldScores[SURV_I];
-		//
-		newScores[PILL_I] -= node2.newScores[PILL_I];
-		newScores[GHOST_I] -= node2.newScores[GHOST_I];
-		newScores[SURV_I] -= node2.newScores[SURV_I];
-	}
-
-	public void addStats(MCTNode node2) {
-		// Add the stats from the node.
-		oldVisitCount += node2.oldVisitCount;
-		newVisitCount += node2.newVisitCount;
-		//
-		oldScores[PILL_I] += node2.oldScores[PILL_I];
-		oldScores[GHOST_I] += node2.oldScores[GHOST_I];
-		oldScores[SURV_I] += node2.oldScores[SURV_I];
-		//
-		newScores[PILL_I] += node2.newScores[PILL_I];
-		newScores[GHOST_I] += node2.newScores[GHOST_I];
-		newScores[SURV_I] += node2.newScores[SURV_I];
-	}
-
-	/**
-	 * @param pathLength the pathLength to set
-	 */
 	public void setPathLength(int pathLength) {
 		this.pathLength = pathLength;
-	}
-
-	int[] pacLocations;
-	MOVE[] moves;
-
-	/**
-	 * Does a simulation using the rootnode's game state followed by actions up to this node's position
-	 * 
-	 * @param simulation The simulation-class to use for simulating the playout
-	 */
-	public MCTResult simulate(StrategySimulation simulation, int simCount,
-			SelectionType selectionType, int target, boolean strategic) {
-		// Do a simulation starting at the root's game state
-		selectedNode = this;
-		pacLocations = new int[selectedNode.depth + 1];
-		moves = new MOVE[selectedNode.depth];
-		int i = 0;
-		while (!selectedNode.isRoot()) {
-			moves[i] = selectedNode.getPathDirection();
-			pacLocations[i] = selectedNode.getJunctionIndex();
-			i++;
-			selectedNode = selectedNode.getParent();
-		}
-		if (selectedNode.junctionIndex > -1) {
-			pacLocations[i] = selectedNode.getJunctionIndex();
-		}
-		// Get the root's game states
-		Game interState = selectedNode.getGameState().copy();
-		DiscreteGame disGame = selectedNode.getdGame().copy();
-		//
-		return simulation.playout(disGame, interState, moves, pacLocations, simCount,
-				selectionType, strategic);
 	}
 
 	@Override
@@ -573,10 +636,10 @@ public abstract class MCTNode {
 		DecimalFormat df2 = new DecimalFormat("#,###,###,##0.000");
 		// meanScores, maxScores, currentScores, maxCurrentScores;
 		String intro = String.format("Moves %s:", pathDirection);
-		String mean = String.format("Total MEAN\t [%s, %s, %s]\t %d visits.",
+		String mean = String.format("Old MEAN\t [%s, %s, %s]\t %d visits.",
 				df2.format(getOldMeanValue(0)), df2.format(getOldMeanValue(1)),
 				df2.format(getOldMeanValue(2)), (int) oldVisitCount);
-		String max = String.format("Total MAX\t [%s, %s, %s]\t %d visits.",
+		String max = String.format("Old MAX \t [%s, %s, %s]\t %d visits.",
 				df2.format(getOldMaxValue(0)), df2.format(getOldMaxValue(1)),
 				df2.format(getOldMaxValue(2)), (int) oldMaxVisitCount);
 		String c_mean = String.format("Current MEAN\t [%s, %s, %s]\t %d visits.",
@@ -585,10 +648,16 @@ public abstract class MCTNode {
 		String c_max = String.format("Current MAX\t [%s, %s, %s]\t %d visits.",
 				df2.format(getNewMaxValue(0)), df2.format(getNewMaxValue(1)),
 				df2.format(getNewMaxValue(2)), (int) newMaxVisitCount);
+		String alpha_s = String.format("Max alpha\t [%s, %s, %s]",
+				df2.format(getAlphaPillScore(true)), df2.format(getAlphaGhostScore(true)),
+				df2.format(getAlphaSurvivalScore(true)));
+		String m_alpha_s = String.format("Mean alpha\t [%s, %s, %s]",
+				df2.format(getAlphaPillScore(false)), df2.format(getAlphaGhostScore(false)),
+				df2.format(getAlphaSurvivalScore(false)));
 
-		return String.format(
-				"%s\n\t%s\n\t%s\n\t%s\n\t%s\n----------------------------------------", intro,
-				mean, max, c_mean, c_max);
+		return String
+				.format("%s\n\t%s\n\t%s\n\t%s\n\t%s\n\n\t%s\n\t%s\n------------------------------------------------------",
+						intro, mean, max, c_mean, c_max, alpha_s, m_alpha_s);
 	}
 
 	/**
@@ -642,73 +711,6 @@ public abstract class MCTNode {
 			for (MCTNode c : children) {
 				c.validate(game);
 			}
-		}
-	}
-
-	public double getAlphaSurvivalScore(boolean max) {
-		if (max) {
-			return UCTSelection.alpha_ps * getOldMaxValue(SURV_I) + (1. - UCTSelection.alpha_ps)
-					* getNewMaxValue(SURV_I);
-		} else {
-			return UCTSelection.alpha_ps * getOldMeanValue(SURV_I) + (1. - UCTSelection.alpha_ps)
-					* getNewMeanValue(SURV_I);
-		}
-	}
-
-	public double getAlphaPillScore(boolean max) {
-		if (max) {
-			return UCTSelection.alpha_ps * getOldMaxValue(PILL_I) * getOldMaxValue(SURV_I)
-					+ (1. - UCTSelection.alpha_ps) * getNewMaxValue(PILL_I)
-					* getNewMaxValue(SURV_I);
-		} else {
-			return UCTSelection.alpha_ps * getOldMeanValue(PILL_I) * getOldMeanValue(SURV_I)
-					+ (1. - UCTSelection.alpha_ps) * getNewMeanValue(PILL_I)
-					* getNewMeanValue(SURV_I);
-		}
-	}
-
-	public double getAlphaGhostScore(boolean max) {
-		if (max) {
-			return UCTSelection.alpha_g * getOldMaxValue(GHOST_I) * getOldMaxValue(SURV_I)
-					+ (1. - UCTSelection.alpha_g) * getNewMaxValue(GHOST_I)
-					* getNewMaxValue(SURV_I);
-		} else {
-			return UCTSelection.alpha_g * getOldMeanValue(GHOST_I) * getOldMeanValue(SURV_I)
-					+ (1. - UCTSelection.alpha_g) * getNewMeanValue(GHOST_I)
-					* getNewMeanValue(SURV_I);
-		}
-	}
-
-	// These are helper functions to get info from the reward vectors by index
-	public double getNewMeanValue(int i) {
-		if (newVisitCount > 0) {
-			return newScores[i] / newVisitCount;
-		} else {
-			return 0.;
-		}
-	}
-
-	public double getNewMaxValue(int i) {
-		if (newMaxVisitCount > 0) {
-			return newMaxScores[i] / newMaxVisitCount;
-		} else {
-			return 0.;
-		}
-	}
-
-	public double getOldMaxValue(int i) {
-		if (oldMaxVisitCount > 0) {
-			return oldMaxScores[i] / oldMaxVisitCount;
-		} else {
-			return 0.;
-		}
-	}
-
-	public double getOldMeanValue(int i) {
-		if (oldVisitCount > 0) {
-			return oldScores[i] / oldVisitCount;
-		} else {
-			return 0.;
 		}
 	}
 }

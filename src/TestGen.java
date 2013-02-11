@@ -1,11 +1,8 @@
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
 public class TestGen {
-
-	private static String[] args1 = { "alpha_ps", "alpha_g", "uct", "gamma", "path", "simulations",
-			"reuse", "decay", "var_depth", "strat_playout", "eiisolver", "ghostbuster", "memetix" };
-	private static final String java = "java -jar MsPacMan.jar ";
 	private static final int numTrials = 25;
 	private static PrintWriter out;
 
@@ -13,10 +10,14 @@ public class TestGen {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-
-		for (int j = 0; j < args1.length; j++) {
-			createOutFile(args1[j]);
-			out.print(java + args1[j] + ".txt " + numTrials + " " + args1[j]);
+		File folder = new File("C:\\Users\\Tom\\Desktop\\config\\");
+		File[] listOfFiles = folder.listFiles();
+		
+		for (int j = 0; j < listOfFiles.length; j++) {
+			String fullName = listOfFiles[j].getName();
+			String shortName = fullName.substring(0, fullName.length() - 5);
+			createOutFile(shortName);
+			out.print("java -jar MsPacMan.jar " + shortName + ".txt " + numTrials + " config/" + fullName + " false");
 			out.flush();
 			if (out != null)
 				out.close();
