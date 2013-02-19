@@ -169,19 +169,12 @@ public class StrategySimulation {
 			pacMove = pathMoves[i];
 			//
 			advanceGame();
-			treePhase++;
 			pathLength--;
 			//
-			if (died || nextMaze || ateGhost || atePower || illegalPP || pathLength == 0) {
+			if (died)
 				break;
-			}
 			//
-			if (i < 0) {
-				destination = dGame.getPacHeading();
-			} else {
-				destination = pacLocations[i];
-			}
-			//
+			treePhase++;
 			steps++;
 			//
 			if (steps >= minSteps) {
@@ -191,12 +184,21 @@ public class StrategySimulation {
 				tempDGame = dGame.copy();
 				tempGame = gameState.copy();
 			}
-			currentEdge = dGame.getCurrentPacmanEdge();
-			// If there is a power-pill on the current edge, stop following path
-			if (currentEdge != null && selectionType == SelectionType.GhostScore
-					&& currentEdge.powerPill
-					&& gameState.isPowerPillStillAvailable(currentEdge.powerPillIndex)) {
+			//
+			if (nextMaze || ateGhost || atePower || illegalPP || pathLength == 0)
 				break;
+			// If there is a power-pill on the current edge, stop following path
+			if (selectionType == SelectionType.GhostScore) {
+				currentEdge = dGame.getCurrentPacmanEdge();
+				if (currentEdge != null && currentEdge.powerPill
+						&& gameState.isPowerPillStillAvailable(currentEdge.powerPillIndex))
+					break;
+			}
+			//
+			if (i < 0) {
+				destination = dGame.getPacHeading();
+			} else {
+				destination = pacLocations[i];
 			}
 			// Follow the chosen path!
 			while (pacLocation != destination) {
@@ -217,7 +219,7 @@ public class StrategySimulation {
 		}
 		//
 		if (died && steps >= minSteps) {
-			maxSimulations = tempMaxSim + maxSims;
+			maxSimulations += tempMaxSim;
 			pillsEaten = tempPills;
 			ghostsEaten = tempGhosts;
 			currentEdgesVisited = tempDGame.getVisitedEdgeCount();
@@ -271,7 +273,8 @@ public class StrategySimulation {
 		pillNorm = .0;
 		ghostNorm = .0;
 		// Determine the pill-score
-		if (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT) {
+		if (nextMaze && gameState.getCurrentLevelTime() < Constants.LEVEL_LIMIT
+				&& gameState.getNumberOfActivePowerPills() == 0) {
 			pillNorm = 1.;
 		} else if ((pillsEaten > 0 || edgePillsEaten > 0) && pillsBefore > 0) {
 			//
@@ -292,7 +295,7 @@ public class StrategySimulation {
 			//
 			ghostNorm = ghostsEaten / ghostDivisor;
 		} else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
-			pillNorm = 0.;
+			pillNorm *= 0.1;
 		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
 	}

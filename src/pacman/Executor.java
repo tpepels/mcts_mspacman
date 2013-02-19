@@ -15,7 +15,7 @@ import pacman.controllers.*;
 import pacman.controllers.examples.Legacy2TheReckoning;
 import pacman.entries.pacman.MyPacMan;
 import pacman.entries.pacman.unimaas.Settings;
-import pacman.entries.pacman.unimaas.framework.XSRandom;
+import pacman.entries.pacman.unimaas.framework.*;
 import pacman.game.Constants;
 import pacman.game.Constants.GHOST;
 import pacman.game.Constants.MOVE;

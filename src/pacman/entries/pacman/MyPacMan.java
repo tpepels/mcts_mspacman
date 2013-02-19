@@ -15,7 +15,7 @@ import pacman.game.Constants.*;
 
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
-	private boolean DEBUG = false;
+	private final boolean DEBUG = false;
 
 	// To use different simulation strategy or selection, set them here.
 	private StrategySimulation simulation = new StrategySimulation();
@@ -47,13 +47,14 @@ public class MyPacMan extends Controller<MOVE> {
 	public MOVE getMove(Game game, long timeDue) {
 		gameState = game;
 		//
-		DEBUG = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
-		if ((move != null && lastTurnMove != null)) {
-			if (move.opposite() == lastTurnMove || move == lastTurnMove.opposite()) {
-				System.out.println("reversed!!");
-				DEBUG = true;
-			}
-		}
+//		DEBUG = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
+//		if ((move != null && lastTurnMove != null)) {
+//			if (move.opposite() == lastTurnMove || move == lastTurnMove.opposite()) {
+//				System.out.println("reversed!!");
+//				DEBUG = true;
+//			}
+//		}
+//		DEBUG = true;
 		updateDiscreteGamePreMove();
 		CauseOfDeath.reset();
 		setSelectionType();
