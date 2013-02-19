@@ -4,6 +4,7 @@ import java.util.EnumMap;
 
 import pacman.entries.pacman.unimaas.framework.CauseOfDeath;
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
+import pacman.entries.pacman.unimaas.framework.Edge;
 import pacman.entries.pacman.unimaas.framework.GhostMoveGenerator;
 import pacman.entries.pacman.unimaas.framework.MCTResult;
 import pacman.entries.pacman.unimaas.framework.PacManMoveGenerator;
@@ -73,7 +74,8 @@ public class StrategySimulation {
 	public double gameCount, deathCount;
 
 	public MCTResult playout(DiscreteGame discreteGame, Game state, MOVE[] pathMoves,
-			int[] pacLocations, int maxSims, int pathLength, SelectionType selectionType, boolean strategic) {
+			int[] pacLocations, int maxSims, int pathLength, SelectionType selectionType,
+			boolean strategic) {
 		//
 		this.selectionType = selectionType;
 		gameState = state;
@@ -161,6 +163,7 @@ public class StrategySimulation {
 		tempGame = null;
 		tempDGame = null;
 		treePhase = 0;
+		Edge currentEdge;
 		for (i = pathMoves.length - 1; i >= 0; i--) {
 			// Execute the first path-move to determine a direction
 			pacMove = pathMoves[i];
@@ -188,14 +191,12 @@ public class StrategySimulation {
 				tempDGame = dGame.copy();
 				tempGame = gameState.copy();
 			}
+			currentEdge = dGame.getCurrentPacmanEdge();
 			// If there is a power-pill on the current edge, stop following path
-			if (dGame.getCurrentPacmanEdge() != null && selectionType == SelectionType.GhostScore) {
-				if (dGame.getCurrentPacmanEdge().powerPill) {
-					if (gameState
-							.isPowerPillStillAvailable(dGame.getCurrentPacmanEdge().powerPillIndex)) {
-						break;
-					}
-				}
+			if (currentEdge != null && selectionType == SelectionType.GhostScore
+					&& currentEdge.powerPill
+					&& gameState.isPowerPillStillAvailable(currentEdge.powerPillIndex)) {
+				break;
 			}
 			// Follow the chosen path!
 			while (pacLocation != destination) {
@@ -215,7 +216,7 @@ public class StrategySimulation {
 			}
 		}
 		//
-		if (died && steps > minSteps) {
+		if (died && steps >= minSteps) {
 			maxSimulations = tempMaxSim + maxSims;
 			pillsEaten = tempPills;
 			ghostsEaten = tempGhosts;
@@ -227,9 +228,11 @@ public class StrategySimulation {
 			pacManMover = new PacManMover(gameState, dGame);
 			ghostMover = new PinchGhostMover(gameState, dGame);
 			CauseOfDeath.redo++;
-			//
 		} else if (died) {
 			CauseOfDeath.tree++;
+		} else {
+			// In case we quit the path early
+			maxSimulations += pathLength;
 		}
 		// Playout phase
 		if (!died && !nextMaze && !illegalPP) {
@@ -275,8 +278,9 @@ public class StrategySimulation {
 			pillNorm = Math.max(pillsEaten, edgePillsEaten) / pillsBefore;
 		}
 		//
-		if (pwrPillsBefore > gameState.getNumberOfActivePowerPills())
-			pillNorm *= .2;
+		if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
+			pillNorm *= .1;
+		}
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
 			if (ghostDivisor == 0) {
@@ -287,6 +291,8 @@ public class StrategySimulation {
 			}
 			//
 			ghostNorm = ghostsEaten / ghostDivisor;
+		} else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
+			pillNorm = 0.;
 		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
 	}
@@ -319,7 +325,7 @@ public class StrategySimulation {
 				try {
 					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
 				} catch (Exception ex) {
-					System.err.println("Ghost on wrong edge in simulation.");
+					// System.err.println("Ghost on wrong edge in simulation.");
 				}
 			}
 			// Reset the ghost statuses

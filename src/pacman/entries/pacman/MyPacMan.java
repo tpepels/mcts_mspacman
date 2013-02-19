@@ -15,25 +15,24 @@ import pacman.game.Constants.*;
 
 public class MyPacMan extends Controller<MOVE> {
 	// Set true for debugging output
-	private final boolean DEBUG = false;
+	private boolean DEBUG = false;
+
 	// To use different simulation strategy or selection, set them here.
 	private StrategySimulation simulation = new StrategySimulation();
 	private final MCTSelection selection = new UCTSelection();
 	// Maximum length of a tree-path and maximum simulation steps in simulation phase
 	public int maxPathLength, maxSimulations;
 	// Safety and minimum ghost score parameters.
-	public double safetyT, ghostSelectScore;
-	// penalties and discounts
-	private double reversePenalty; // The reward penalty for selecting a reverse move
-	private double discount; // Decay factor for the tree decay
-	private boolean maxSelection;
+	public double safetyT, ghostSelectScore, reversePenalty, discount; // Decay factor for the tree decay
 	//
+	public boolean reuse = true, decay = true, var_depth = true, strategic_playout = true,
+			max_selection = true;
+	public int maxNodeDepth = 5; // For fixed node depth tests
+	// Counters etc..
 	private boolean atJunction = false, prevLocationWasJunction = false;
 	private final boolean[] ghostsAtJunctions = new boolean[4], ghostsAtInitial = new boolean[4];
 	private final int[] ghostJunctions = new int[4];
-	// Counters etc..
-	private int lastJunction = -1, currentMaze = -1, pacLives = Constants.NUM_LIVES,
-			currentTarget = -1;
+	private int lastJunction = -1, currentMaze = -1, pacLives = Constants.NUM_LIVES;
 	private double prevMoveSurvivalRate = 0., simulations = 0;
 	private MOVE move, lastTurnMove, lastJunctionMove;
 	// Gamestate
@@ -43,23 +42,25 @@ public class MyPacMan extends Controller<MOVE> {
 	private SinglePlayerNode root;
 	private Edge currentPacmanEdge;
 	private SelectionType selectionType;
-	//
-	public boolean reuse = true, decay = true, var_depth = true, strategic_playout = true;
-	public int maxNodeDepth = 5; // For fixed node depth tests
 
 	@Override
 	public MOVE getMove(Game game, long timeDue) {
 		gameState = game;
+		//
+		DEBUG = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
+		if ((move != null && lastTurnMove != null)) {
+			if (move.opposite() == lastTurnMove || move == lastTurnMove.opposite()) {
+				System.out.println("reversed!!");
+				DEBUG = true;
+			}
+		}
 		updateDiscreteGamePreMove();
 		CauseOfDeath.reset();
 		setSelectionType();
 		setupTree();
-		root.validate(game);
+//		root.validate(game);
 		// Run the simulations
 		runSimulations(timeDue - 1);
-		// Competition call
-		// runSimulations(timeDue - slackTime);
-		//
 		MCTNode selectedChild = null;
 		MCTNode[] children = root.getChildren();
 		// No suitable moves could be found using MCTS
@@ -68,7 +69,7 @@ public class MyPacMan extends Controller<MOVE> {
 		} else {
 			root.propagateMaxValues(SelectionType.SurvivalRate);
 			// Remember the previous safety rate
-			prevMoveSurvivalRate = root.getAlphaSurvivalScore(maxSelection);
+			prevMoveSurvivalRate = root.getAlphaSurvivalScore(max_selection);
 			// Check if safe enough to make a rewarding move.
 			if (prevMoveSurvivalRate < safetyT) {
 				selectionType = SelectionType.SurvivalRate;
@@ -76,7 +77,7 @@ public class MyPacMan extends Controller<MOVE> {
 				// Check if we should go for the ghosts
 				root.propagateMaxValues(SelectionType.GhostScore, safetyT);
 				for (MCTNode c : root.getChildren()) {
-					if (c.getAlphaGhostScore(maxSelection) >= ghostSelectScore) {
+					if (c.getAlphaGhostScore(max_selection) >= ghostSelectScore) {
 						selectionType = SelectionType.GhostScore;
 					}
 				}
@@ -102,7 +103,7 @@ public class MyPacMan extends Controller<MOVE> {
 					}
 				}
 			}
-			// Get the path-move from the selected childnode
+			// Get the path-move from the selected child
 			if (selectedChild != null) {
 				move = selectedChild.getPathDirection();
 			} else { // No child could be selected, return a fast move.
@@ -116,12 +117,8 @@ public class MyPacMan extends Controller<MOVE> {
 			CauseOfDeath.print();
 		}
 		// Reset the prevlocation value
-		if (!atJunction) {			
+		if (!atJunction) {
 			prevLocationWasJunction = false;
-		}
-		if (DEBUG && (move.opposite() == gameState.getPacmanLastMoveMade()
-				|| move == gameState.getPacmanLastMoveMade().opposite())) {
-			System.err.println("reversed!!");
 		}
 		// This makes sure moves are always returned on time
 		// if (System.currentTimeMillis() > (timeDue - finalSlackTime)
@@ -156,7 +153,7 @@ public class MyPacMan extends Controller<MOVE> {
 			simulations++;
 			//
 			root.addVisit();
-			expandNode = root.selection(selection, maxSelection, maxPathLength);
+			expandNode = root.selection(selection, max_selection, maxPathLength);
 			simulationNode = expandNode;
 
 			// Check if the expandnode can be expanded
@@ -201,7 +198,7 @@ public class MyPacMan extends Controller<MOVE> {
 		}
 		selection.setSelectionType(selectionType);
 	}
-	
+
 	private MCTNode getBestChild(MCTNode[] children, SelectionType selectionType) {
 		double maxScore = 0.f;
 		MCTNode selectedChild = null;
@@ -215,16 +212,16 @@ public class MyPacMan extends Controller<MOVE> {
 			double score = 0.f;
 			if (selectionType == SelectionType.GhostScore) {
 				// Don't consider unsafe children
-				if (c.getAlphaSurvivalScore(maxSelection) < safetyT) {
+				if (c.getAlphaSurvivalScore(max_selection) < safetyT) {
 					continue;
 				}
-				score = c.getAlphaGhostScore(maxSelection);
+				score = c.getAlphaGhostScore(max_selection);
 			} else if (selectionType == SelectionType.PillScore) {
 				// Don't consider unsafe children
-				if (c.getAlphaSurvivalScore(maxSelection) < safetyT) {
+				if (c.getAlphaSurvivalScore(max_selection) < safetyT) {
 					continue;
 				}
-				score = c.getAlphaPillScore(maxSelection);
+				score = c.getAlphaPillScore(max_selection);
 			}
 			// Give a penalty to the score if it reverses ms pac-man
 			if (c.getPathDirection().opposite() == gameState.getPacmanLastMoveMade()
@@ -234,7 +231,7 @@ public class MyPacMan extends Controller<MOVE> {
 			// Don't punish survival-based selection, even if reversed
 			if (selectionType == SelectionType.SurvivalRate) {
 				// For maximum selection
-				score = c.getAlphaSurvivalScore(maxSelection);
+				score = c.getAlphaSurvivalScore(max_selection);
 			}
 			// Remember the highest score seen and the node that came with it
 			if (score > maxScore) {
@@ -394,9 +391,9 @@ public class MyPacMan extends Controller<MOVE> {
 			root.setEdge(currentPacmanEdge);
 			return;
 		}
-		root.setEdge(currentPacmanEdge);		
+		root.setEdge(currentPacmanEdge);
 	}
-	
+
 	public void loadSettings(Settings setting) {
 		maxPathLength = (int) setting.maxPathLength[0];
 		maxSimulations = (int) setting.maxSimulations[0];
@@ -423,7 +420,7 @@ public class MyPacMan extends Controller<MOVE> {
 		reuse = setting.tree_reuse;
 		var_depth = setting.tree_var_depth;
 		strategic_playout = setting.strategic_playout;
-		maxSelection = setting.max_selection;
+		max_selection = setting.max_selection;
 	}
 
 	/**
@@ -471,8 +468,6 @@ public class MyPacMan extends Controller<MOVE> {
 
 		return feasableGhost;
 	}
-
-
 
 	/**
 	 * Returns the forward move if pacman is on an edge!
@@ -527,7 +522,7 @@ public class MyPacMan extends Controller<MOVE> {
 
 		// Pacman died
 		if (gameState.wasPacManEaten()) {
-			if(DEBUG)
+			if (DEBUG)
 				System.out.println("I Died here !!!=======================================");
 			lastJunction = -1;
 			currentPacmanEdge = null;
@@ -568,7 +563,7 @@ public class MyPacMan extends Controller<MOVE> {
 		}
 		//
 		atJunction = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
-		// DEBUG = atJunction;
+
 		if (atJunction) {
 			//
 			lastJunction = gameState.getPacmanCurrentNodeIndex();
@@ -600,7 +595,7 @@ public class MyPacMan extends Controller<MOVE> {
 					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()],
 							gameState.getGhostLastMoveMade(g));
 				} catch (Exception ex) {
-					System.err.println("Ghost on wrong edge!");
+					// System.err.println("Ghost on wrong edge!");
 				}
 			}
 			// Reset the ghost statuses

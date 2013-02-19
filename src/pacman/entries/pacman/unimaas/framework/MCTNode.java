@@ -31,8 +31,7 @@ public abstract class MCTNode {
 	/**
 	 * Constructor for root node
 	 * 
-	 * @param gameState
-	 *            Gamestate of the node
+	 * @param gameState Gamestate of the node
 	 */
 	public MCTNode(DiscreteGame dGame, Game gameState) {
 		this.depth = 0;
@@ -60,12 +59,9 @@ public abstract class MCTNode {
 	/**
 	 * Constructor for MCT node
 	 * 
-	 * @param game
-	 *            StateThe gamestate of the node
-	 * @param parent
-	 *            The parent of the node.
-	 * @param playerNode
-	 *            True if this is a node for a player-move, false if opponent move
+	 * @param game StateThe gamestate of the node
+	 * @param parent The parent of the node.
+	 * @param playerNode True if this is a node for a player-move, false if opponent move
 	 */
 	public MCTNode(Game gameState, MCTNode parent, MOVE pathDir, Edge edge, int junctionI,
 			int pathLength) {
@@ -280,8 +276,7 @@ public abstract class MCTNode {
 	/**
 	 * Check based on some simple rules to determine if this node should be expanded
 	 * 
-	 * @param maxPathLength
-	 *            The maximum path-length for paths in the tree
+	 * @param maxPathLength The maximum path-length for paths in the tree
 	 * @return true if this node can be expanded, false otherwise
 	 */
 	public boolean canExpand(int maxPathLength, boolean variable_depth, int maxNodeDepth) {
@@ -315,8 +310,7 @@ public abstract class MCTNode {
 	/**
 	 * Selects a leafnode in the tree for expansion according to the given selection method.
 	 * 
-	 * @param selection
-	 *            The class containing the selection method
+	 * @param selection The class containing the selection method
 	 * @return The selected leafnode.
 	 */
 	public MCTNode selection(MCTSelection selection, boolean maxSelection) {
@@ -331,8 +325,7 @@ public abstract class MCTNode {
 	/**
 	 * Selects a leafnode in the tree for expansion according to the given selection method.
 	 * 
-	 * @param selection
-	 *            The class containing the selection method
+	 * @param selection The class containing the selection method
 	 * @return The selected leafnode.
 	 */
 	public MCTNode selection(MCTSelection selection, boolean maxSelection, int maxPathLength) {
@@ -458,8 +451,7 @@ public abstract class MCTNode {
 	/**
 	 * Does a simulation using the rootnode's game state followed by actions up to this node's position
 	 * 
-	 * @param simulation
-	 *            The simulation-class to use for simulating the playout
+	 * @param simulation The simulation-class to use for simulating the playout
 	 */
 	public MCTResult simulate(StrategySimulation simulation, int simCount, int pathLength,
 			SelectionType selectionType, boolean strategic) {
@@ -487,36 +479,62 @@ public abstract class MCTNode {
 
 	public double getAlphaSurvivalScore(boolean max) {
 		if (max) {
-			return UCTSelection.alpha_ps * getOldMaxValue(SURV_I) + (1. - UCTSelection.alpha_ps)
-					* getNewMaxValue(SURV_I);
+			if (oldMaxVisitCount > UCTSelection.minVisits) {
+				return UCTSelection.alpha_g * getOldMaxValue(SURV_I) + (1. - UCTSelection.alpha_g)
+						* getNewMaxValue(SURV_I);
+			} else {
+				return getNewMaxValue(SURV_I);
+			}
 		} else {
-			return UCTSelection.alpha_ps * getOldMeanValue(SURV_I) + (1. - UCTSelection.alpha_ps)
-					* getNewMeanValue(SURV_I);
+			if (oldMaxVisitCount > UCTSelection.minVisits) {
+				return UCTSelection.alpha_g * getOldMeanValue(SURV_I) + (1. - UCTSelection.alpha_g)
+						* getNewMeanValue(SURV_I);
+			} else {
+				return getNewMeanValue(SURV_I);
+			}
 		}
 	}
 
 	public double getAlphaPillScore(boolean max) {
 		if (max) {
-			return UCTSelection.alpha_ps * getOldMaxValue(PILL_I) * getOldMaxValue(SURV_I)
-					+ (1. - UCTSelection.alpha_ps) * getNewMaxValue(PILL_I)
-					* getNewMaxValue(SURV_I);
+			if (oldMaxVisitCount > UCTSelection.minVisits) {
+				return UCTSelection.alpha_ps * getOldMaxValue(PILL_I)
+						+ (1. - UCTSelection.alpha_ps) * getNewMaxValue(PILL_I)
+						* getAlphaSurvivalScore(max);
+			} else {
+				return getNewMaxValue(PILL_I) * getNewMaxValue(SURV_I);
+			}
 		} else {
-			return UCTSelection.alpha_ps * getOldMeanValue(PILL_I) * getOldMeanValue(SURV_I)
-					+ (1. - UCTSelection.alpha_ps) * getNewMeanValue(PILL_I)
-					* getNewMeanValue(SURV_I);
+			if (oldMaxVisitCount > UCTSelection.minVisits) {
+
+				return (UCTSelection.alpha_ps * getOldMeanValue(PILL_I) + (1. - UCTSelection.alpha_ps)
+						* getNewMeanValue(PILL_I))
+						* getAlphaSurvivalScore(max);
+			} else {
+				return getNewMeanValue(PILL_I) * getNewMeanValue(SURV_I);
+			}
 		}
 	}
 
 	public double getAlphaGhostScore(boolean max) {
 		if (max) {
-			return (UCTSelection.alpha_g * getOldMaxValue(GHOST_I) + (1. - UCTSelection.alpha_g)
-					* getNewMaxValue(GHOST_I))
-					* getAlphaSurvivalScore(max);
+			if (oldMaxVisitCount > UCTSelection.minVisits) {
+				return (UCTSelection.alpha_g * getOldMaxValue(GHOST_I) + (1. - UCTSelection.alpha_g)
+						* getNewMaxValue(GHOST_I))
+						* getAlphaSurvivalScore(max);
+			} else {
+				return getNewMaxValue(GHOST_I) * getNewMaxValue(SURV_I);
+			}
 
 		} else {
-			return (UCTSelection.alpha_g * getOldMeanValue(GHOST_I) + (1. - UCTSelection.alpha_g)
-					* getNewMeanValue(GHOST_I))
-					* getAlphaSurvivalScore(max);
+			if (oldMaxVisitCount > UCTSelection.minVisits) {
+				return (UCTSelection.alpha_g * getOldMeanValue(GHOST_I) + (1. - UCTSelection.alpha_g)
+						* getNewMeanValue(GHOST_I))
+						* getAlphaSurvivalScore(max);
+			} else {
+				return getNewMeanValue(GHOST_I) * getNewMeanValue(SURV_I);
+			}
+
 		}
 	}
 

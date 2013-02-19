@@ -39,12 +39,12 @@ public class Settings {
 	public static Settings getDefaultSetting() {
 		Settings defSettings = new Settings();
 		//
-		defSettings.maxPathLength[0] = 70;
-		defSettings.maxSimulations[0] = 40;
+		defSettings.maxPathLength[0] = 40;
+		defSettings.maxSimulations[0] = 75;
 		//
-		defSettings.safetyT[0] = .73;
+		defSettings.safetyT[0] = .75;
 		defSettings.ghostSelectScore[0] = .5;
-		defSettings.reversePenalty[0] = .8;
+		defSettings.reversePenalty[0] = .9;
 		defSettings.discount[0] = .7;
 		//
 		defSettings.uctC[0] = .9;
@@ -53,11 +53,11 @@ public class Settings {
 		defSettings.ppPenalty1[0] = .5;
 		defSettings.ppPenalty2[0] = .2;
 		//
-		defSettings.pacEpsilon[0] = .7;
-		defSettings.ghostEpsilon[0] = .7;
+		defSettings.pacEpsilon[0] = .8;
+		defSettings.ghostEpsilon[0] = .8;
 		//
-		defSettings.alpha_pill[0] = .6;
-		defSettings.alpha_ghosts[0] = .2;
+		defSettings.alpha_pill[0] = .4;
+		defSettings.alpha_ghosts[0] = .3;
 		//
 		defSettings.tree_reuse = true;
 		defSettings.tree_decay = true;

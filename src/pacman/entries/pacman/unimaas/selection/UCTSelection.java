@@ -53,7 +53,7 @@ public class UCTSelection implements MCTSelection {
 			if (c.newVisitCount < minVisits) {
 				// Give an unvisited node a high value s.t. it is selected.
 				uctValue = 100.0 + (XSRandom.r.nextDouble() * 10.0);
-			} else if (c.oldVisitCount >= 1.) {
+			} else if (c.oldVisitCount > minVisits) {
 				uctValue = alpha
 						* (val_old + C * Math.sqrt(Math.log(P.oldVisitCount) / c.oldVisitCount))
 						+ (1. - alpha)
@@ -63,8 +63,11 @@ public class UCTSelection implements MCTSelection {
 				uctValue = val_new + C * Math.sqrt(Math.log(P.newVisitCount) / c.newVisitCount);
 			}
 
-			if (Double.isNaN(uctValue))
-				System.err.println("wtf");
+			if (Double.isNaN(uctValue)) {
+				System.err.println("NaN value in selection.");
+				uctValue = XSRandom.r.nextDouble();
+			}
+			
 			// Select the highest value
 			if (uctValue > bestValue) {
 				selectedNode = c;

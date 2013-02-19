@@ -42,8 +42,7 @@ public class Executor {
 	/**
 	 * The main method. Several options are listed - simply remove comments to use the option you want.
 	 * 
-	 * @param args
-	 *            the command line arguments
+	 * @param args the command line arguments
 	 */
 	@SuppressWarnings({ "unchecked" })
 	public static void main(String[] args) {
@@ -180,31 +179,38 @@ public class Executor {
 		double avgScore = 0, maxScore = 0, minScore = Double.POSITIVE_INFINITY, S;
 		int[] values = new int[trials];
 		long due;
-		long mySeed = System.currentTimeMillis();
-		if (seed >= 0) {
-			mySeed = seed;
-		}
-		XSRandom.r.setSeed(mySeed);
 		Game game;
 		//
-		int i = 0, realTrials = 0, avgLives = 0, avgMaze = 0;
+		int i = 0, realTrials = 0, avgLives = 0, avgMaze = 0, errorCount = 0;
 		writeOutput(":: Running " + trials + " games");
 		if (printall)
 			writeOutput("Score \t Lives \t Final level");
 		//
 		for (i = 0; i < trials; i++) {
-			game = new Game(System.currentTimeMillis());
+			long mySeed = System.currentTimeMillis();
+			if (seed >= 0) {
+				mySeed = seed;
+			}
+			XSRandom.r.setSeed(mySeed);
+			game = new Game(mySeed);
+			errorCount = 0;
 			//
-
 			while (!game.gameOver()) {
 				try {
 					game.advanceGame(pacManController.getMove(game.copy(),
 							System.currentTimeMillis() + DELAY), ghostController.getMove(
 							game.copy(), System.currentTimeMillis() + DELAY));
+					errorCount = 0;
 				} catch (Exception ex) {
-					System.err.println("Error in move: " + ex.getMessage()
-							+ " this does not stop the game.");
+					errorCount++;
+					System.err.println("Error count: " + errorCount);
 					ex.printStackTrace();
+					// too many errors, skip the game
+					if(errorCount >= 5) {
+						System.err.println("Too many errors, ending game.");
+						writeOutput("game skipped due to errors.");
+						break;
+					}
 				}
 			}
 
@@ -352,14 +358,10 @@ public class Executor {
 	/**
 	 * Run a game in asynchronous mode and recorded.
 	 * 
-	 * @param pacManController
-	 *            The Pac-Man controller
-	 * @param ghostController
-	 *            The Ghosts controller
-	 * @param visual
-	 *            Whether to run the game with visuals
-	 * @param fileName
-	 *            The file name of the file that saves the replay
+	 * @param pacManController The Pac-Man controller
+	 * @param ghostController The Ghosts controller
+	 * @param visual Whether to run the game with visuals
+	 * @param fileName The file name of the file that saves the replay
 	 */
 	public void runGameTimedRecorded(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, boolean visual, String fileName) {
@@ -407,10 +409,8 @@ public class Executor {
 	/**
 	 * Replay a previously saved game.
 	 * 
-	 * @param fileName
-	 *            The file name of the game to be played
-	 * @param visual
-	 *            Indicates whether or not to use visuals
+	 * @param fileName The file name of the game to be played
+	 * @param visual Indicates whether or not to use visuals
 	 */
 	public void replayGame(String fileName, boolean visual) {
 		ArrayList<String> timeSteps = loadReplay(fileName);

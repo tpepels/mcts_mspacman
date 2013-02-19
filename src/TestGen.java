@@ -27,7 +27,7 @@ public class TestGen {
 	private static void createOutFile(String fileName) {
 		try {
 			// FileWriter logFile = new FileWriter(fileName, true);
-			out = new PrintWriter("C:\\Users\\Tom\\Desktop\\Tests\\" + fileName);
+			out = new PrintWriter("C:\\Users\\Tom\\Desktop\\scripts\\" + fileName);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
