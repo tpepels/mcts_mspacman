@@ -196,7 +196,7 @@ public abstract class MCTNode {
 			for (MCTNode child : children) {
 				// Do not use values of unvisited children
 				if (child.newVisitCount < UCTSelection.minVisits
-						|| child.getAlphaSurvivalScore(true) < minRate) {
+						|| getNewMaxValue(SURV_I) < minRate) {
 					continue;
 				}
 				if (selectionType == SelectionType.SurvivalRate) {
@@ -378,6 +378,25 @@ public abstract class MCTNode {
 		newVisitCount = node2.newVisitCount;
 	}
 
+	public void clearStats() {
+		// Clear the stats.
+		oldVisitCount = 0;
+		newVisitCount = 0;
+		oldMaxVisitCount = 0;
+		newMaxVisitCount = 0;
+		//
+		oldScores = new double[3];
+		newScores = new double[3];
+		oldMaxScores = new double[3];
+		newMaxScores = new double[3];
+		//
+		if (!isLeaf()) {
+			for (MCTNode c : children) {
+				c.clearStats();
+			}
+		}
+	}
+
 	public void substractStats(MCTNode node2) {
 		// Substract the stats from the node.
 		oldVisitCount -= node2.oldVisitCount;
@@ -440,63 +459,60 @@ public abstract class MCTNode {
 
 	public double getAlphaSurvivalScore(boolean max) {
 		if (max) {
-			if (oldMaxVisitCount > UCTSelection.minVisits) {
-				return UCTSelection.alpha_g * getOldMaxValue(SURV_I) + (1. - UCTSelection.alpha_g)
-						* getNewMaxValue(SURV_I);
-			} else {
-				return getNewMaxValue(SURV_I);
+			if (oldMaxVisitCount + newMaxVisitCount > 0) {
+				return (UCTSelection.alpha_g * oldMaxScores[SURV_I] + (1. - UCTSelection.alpha_g)
+						* newMaxScores[SURV_I])
+						/ (UCTSelection.alpha_g * oldMaxVisitCount + (1. - UCTSelection.alpha_g)
+								* newMaxVisitCount);
 			}
 		} else {
-			if (oldMaxVisitCount > UCTSelection.minVisits) {
-				return UCTSelection.alpha_g * getOldMeanValue(SURV_I) + (1. - UCTSelection.alpha_g)
-						* getNewMeanValue(SURV_I);
-			} else {
-				return getNewMeanValue(SURV_I);
+			if (oldVisitCount + newVisitCount > 0) {
+				return (UCTSelection.alpha_g * oldScores[SURV_I] + (1. - UCTSelection.alpha_g)
+						* newScores[SURV_I])
+						/ (UCTSelection.alpha_g * oldVisitCount + (1. - UCTSelection.alpha_g)
+								* newVisitCount);
 			}
 		}
+		return 0;
 	}
 
 	public double getAlphaPillScore(boolean max) {
 		if (max) {
-			if (oldMaxVisitCount > UCTSelection.minVisits) {
-				return UCTSelection.alpha_ps * getOldMaxValue(PILL_I)
-						+ (1. - UCTSelection.alpha_ps) * getNewMaxValue(PILL_I)
+			if (oldMaxVisitCount + newMaxVisitCount > 0) {
+				return ((UCTSelection.alpha_ps * oldMaxScores[PILL_I] + (1. - UCTSelection.alpha_ps)
+						* newMaxScores[PILL_I]) / (UCTSelection.alpha_ps * oldMaxVisitCount + (1. - UCTSelection.alpha_ps)
+						* newMaxVisitCount))
 						* getAlphaSurvivalScore(max);
-			} else {
-				return getNewMaxValue(PILL_I) * getNewMaxValue(SURV_I);
 			}
 		} else {
-			if (oldMaxVisitCount > UCTSelection.minVisits) {
-
-				return (UCTSelection.alpha_ps * getOldMeanValue(PILL_I) + (1. - UCTSelection.alpha_ps)
-						* getNewMeanValue(PILL_I))
+			if (oldVisitCount + newVisitCount > 0) {
+				return ((UCTSelection.alpha_ps * oldScores[PILL_I] + (1. - UCTSelection.alpha_ps)
+						* newScores[PILL_I]) / (UCTSelection.alpha_ps * oldVisitCount + (1. - UCTSelection.alpha_ps)
+						* newVisitCount))
 						* getAlphaSurvivalScore(max);
-			} else {
-				return getNewMeanValue(PILL_I) * getNewMeanValue(SURV_I);
 			}
 		}
+		return 0;
 	}
 
 	public double getAlphaGhostScore(boolean max) {
 		if (max) {
-			if (oldMaxVisitCount > UCTSelection.minVisits) {
-				return (UCTSelection.alpha_g * getOldMaxValue(GHOST_I) + (1. - UCTSelection.alpha_g)
-						* getNewMaxValue(GHOST_I))
+			if (oldMaxVisitCount + newMaxVisitCount > 0) {
+				return ((UCTSelection.alpha_g * oldMaxScores[GHOST_I] + (1. - UCTSelection.alpha_g)
+						* newMaxScores[GHOST_I]) / (UCTSelection.alpha_g * oldMaxVisitCount + (1. - UCTSelection.alpha_g)
+						* newMaxVisitCount))
 						* getAlphaSurvivalScore(max);
-			} else {
-				return getNewMaxValue(GHOST_I) * getNewMaxValue(SURV_I);
 			}
-
 		} else {
-			if (oldMaxVisitCount > UCTSelection.minVisits) {
-				return (UCTSelection.alpha_g * getOldMeanValue(GHOST_I) + (1. - UCTSelection.alpha_g)
-						* getNewMeanValue(GHOST_I))
+			if (oldVisitCount + newVisitCount > 0) {
+				return ((UCTSelection.alpha_g * oldScores[GHOST_I] + (1. - UCTSelection.alpha_g)
+						* newScores[GHOST_I]) / (UCTSelection.alpha_g * oldVisitCount + (1. - UCTSelection.alpha_g)
+						* newVisitCount))
 						* getAlphaSurvivalScore(max);
-			} else {
-				return getNewMeanValue(GHOST_I) * getNewMeanValue(SURV_I);
 			}
-
 		}
+
+		return 0;
 	}
 
 	// These are helper functions to get info from the reward vectors by index

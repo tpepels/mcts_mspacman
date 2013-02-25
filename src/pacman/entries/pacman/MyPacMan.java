@@ -47,19 +47,19 @@ public class MyPacMan extends Controller<MOVE> {
 	public MOVE getMove(Game game, long timeDue) {
 		gameState = game;
 		//
-//		DEBUG = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
-//		if ((move != null && lastTurnMove != null)) {
-//			if (move.opposite() == lastTurnMove || move == lastTurnMove.opposite()) {
-//				System.out.println("reversed!!");
-//				DEBUG = true;
-//			}
-//		}
-//		DEBUG = true;
+		// DEBUG = gameState.isJunction(gameState.getPacmanCurrentNodeIndex());
+		// if ((move != null && lastTurnMove != null)) {
+		// if (move.opposite() == lastTurnMove || move == lastTurnMove.opposite()) {
+		// System.out.println("reversed!!");
+		// DEBUG = true;
+		// }
+		// }
+		// DEBUG = true;
 		updateDiscreteGamePreMove();
 		CauseOfDeath.reset();
 		setSelectionType();
 		setupTree();
-//		root.validate(game);
+		// root.validate(game);
 		// Run the simulations
 		runSimulations(timeDue - 1);
 		MCTNode selectedChild = null;
@@ -70,7 +70,7 @@ public class MyPacMan extends Controller<MOVE> {
 		} else {
 			root.propagateMaxValues(SelectionType.SurvivalRate);
 			// Remember the previous safety rate
-			prevMoveSurvivalRate = root.getAlphaSurvivalScore(max_selection);
+			prevMoveSurvivalRate = root.getNewMaxValue(MCTNode.SURV_I);
 			// Check if safe enough to make a rewarding move.
 			if (prevMoveSurvivalRate < safetyT) {
 				selectionType = SelectionType.SurvivalRate;
@@ -78,7 +78,8 @@ public class MyPacMan extends Controller<MOVE> {
 				// Check if we should go for the ghosts
 				root.propagateMaxValues(SelectionType.GhostScore, safetyT);
 				for (MCTNode c : root.getChildren()) {
-					if (c.getAlphaGhostScore(max_selection) >= ghostSelectScore) {
+					if (c.getNewMaxValue(MCTNode.GHOST_I) 
+							* c.getNewMaxValue(MCTNode.SURV_I) >= ghostSelectScore) {
 						selectionType = SelectionType.GhostScore;
 					}
 				}
@@ -175,28 +176,22 @@ public class MyPacMan extends Controller<MOVE> {
 	 * Sets the selection type based on the current state of the game.
 	 */
 	private void setSelectionType() {
-		if (prevMoveSurvivalRate >= safetyT) {
-			//
-			boolean ghostSelection = false;
-			for (GHOST g : GHOST.values()) {
-				if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
-					ghostSelection = true;
-					break;
-				}
+		// if (prevMoveSurvivalRate >= safetyT) {
+		selectionType = SelectionType.PillScore;
+		//
+		boolean ghostSelection = false;
+		for (GHOST g : GHOST.values()) {
+			if (gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
+				ghostSelection = true;
+				break;
 			}
-			//
-			if (ghostSelection) {
-				if (feasableBlueGhost()) {
-					selectionType = SelectionType.GhostScore;
-				} else {
-					selectionType = SelectionType.PillScore;
-				}
-			} else {
-				selectionType = SelectionType.PillScore;
-			}
-		} else {
-			selectionType = SelectionType.SurvivalRate;
 		}
+		if (ghostSelection && feasableBlueGhost()) {
+			selectionType = SelectionType.GhostScore;
+		}
+		// } else {
+		// selectionType = SelectionType.SurvivalRate;
+		// }
 		selection.setSelectionType(selectionType);
 	}
 
@@ -209,17 +204,19 @@ public class MyPacMan extends Controller<MOVE> {
 			if (DEBUG) {
 				System.out.println(c);
 			}
+			if (c.getNewMaxValue(MCTNode.SURV_I) <= .0001)
+				continue;
 			//
 			double score = 0.f;
 			if (selectionType == SelectionType.GhostScore) {
 				// Don't consider unsafe children
-				if (c.getAlphaSurvivalScore(max_selection) < safetyT) {
+				if (c.getNewMaxValue(MCTNode.SURV_I) < safetyT) {
 					continue;
 				}
 				score = c.getAlphaGhostScore(max_selection);
 			} else if (selectionType == SelectionType.PillScore) {
 				// Don't consider unsafe children
-				if (c.getAlphaSurvivalScore(max_selection) < safetyT) {
+				if (c.getNewMaxValue(MCTNode.SURV_I) < safetyT) {
 					continue;
 				}
 				score = c.getAlphaPillScore(max_selection);
@@ -257,20 +254,29 @@ public class MyPacMan extends Controller<MOVE> {
 			root.setEdge(currentPacmanEdge);
 			return;
 		}
+
+		// re-use the game tree
+		// The discrete rulles for tossing the tree:
+		// 1. Pac-man was eaten or gone to next level
+		// 2. There was a global reversal event
+		// 3. Pac-man ate a ghost
+		// 4. Pac-man ate a power-pill
+		if (gameState.wasPacManEaten() || gameState.getCurrentLevelTime() < 2 || root == null
+				|| gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)
+				|| gameState.getNumGhostsEaten() > 0 || gameState.wasPowerPillEaten()) {
+			root = new SinglePlayerNode(dGame, gameState);
+			root.setEdge(currentPacmanEdge);
+			return;
+		} else if (root != null && root.getChildren() == null) {
+			root = new SinglePlayerNode(dGame, gameState);
+			root.setEdge(currentPacmanEdge);
+			return;
+		}
+		// Here be tree reuse!
 		try {
-			// re-use the game tree
-			// The discrete rulles for tossing the tree:
-			// 1. Pac-man was eaten or gone to next level
-			// 2. There was a global reversal event
-			// 3. Pac-man ate a ghost
-			// 4. Pac-man ate a power-pill
-			if (gameState.wasPacManEaten() || gameState.getCurrentLevelTime() < 2 || root == null
-					|| gameState.getTimeOfLastGlobalReversal() == (gameState.getTotalTime() - 1)
-					|| gameState.getNumGhostsEaten() > 0 || gameState.wasPowerPillEaten()) {
-				root = new SinglePlayerNode(dGame, gameState);
-			} else if (root != null && root.getChildren() == null) {
-				root = new SinglePlayerNode(dGame, gameState);
-			} else if (atJunction) {
+			// clearBadChildren(root);
+			//
+			if (atJunction) {
 				MCTNode newRoot = null;
 				MCTNode extraChild = null;
 				// Select the new root based on the last move made.
@@ -394,6 +400,15 @@ public class MyPacMan extends Controller<MOVE> {
 		}
 		root.setEdge(currentPacmanEdge);
 	}
+
+//	private void clearBadChildren(MCTNode root) {
+//		for (MCTNode c : root.getChildren()) {
+//			if (c.getNewMeanValue(MCTNode.SURV_I) <= .2) {
+//				root.substractStats(c);
+//				c.clearStats();
+//			}
+//		}
+//	}
 
 	public void loadSettings(Settings setting) {
 		maxPathLength = (int) setting.maxPathLength[0];

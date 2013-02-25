@@ -17,7 +17,7 @@ public class UCTSelection implements MCTSelection {
 		MCTNode selectedNode = null;
 		double bestValue = Double.NEGATIVE_INFINITY;
 		MCTNode[] children = P.getChildren();
-		double alpha = (selectionType == SelectionType.GhostScore) ? alpha_g : alpha_ps;
+		double alpha = (selectionType == SelectionType.PillScore) ? alpha_ps : alpha_g;
 		//
 		for (MCTNode c : children) {
 			double uctValue = 0., val_old = 0., val_new = 0.;
@@ -52,7 +52,7 @@ public class UCTSelection implements MCTSelection {
 			//
 			if (c.newVisitCount < minVisits) {
 				// Give an unvisited node a high value s.t. it is selected.
-				uctValue = 100.0 + (XSRandom.r.nextDouble() * 10.0);
+				uctValue = 10.0 + (XSRandom.r.nextDouble() * 10.0);
 			} else if (c.oldVisitCount > minVisits) {
 				uctValue = alpha
 						* (val_old + C * Math.sqrt(Math.log(P.oldVisitCount) / c.oldVisitCount))

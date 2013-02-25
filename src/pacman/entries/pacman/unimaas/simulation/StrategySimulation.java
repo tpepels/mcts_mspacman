@@ -295,7 +295,7 @@ public class StrategySimulation {
 			//
 			ghostNorm = ghostsEaten / ghostDivisor;
 		} else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
-			pillNorm *= 0.1;
+			pillNorm *= .1;
 		}
 		return new MCTResult(pillNorm, ghostNorm, !died);
 	}
@@ -316,8 +316,11 @@ public class StrategySimulation {
 	 * Advances the current game-state by 1 time-unit.
 	 */
 	private void advanceGame() {
+		int ghostsInlair = 0;
 		// Store the edible time for each edible ghost.
 		for (GHOST g : GHOST.values()) {
+			if (gameState.getGhostLairTime(g) > 0)
+				ghostsInlair++;
 			// Reset ghosts that were at initial index before the last move
 			if (ghostsAtInitial[g.ordinal()]) {
 				dGame.setGhostEdgeToInitial(g.ordinal(), gameState.getGhostLastMoveMade(g));
@@ -410,7 +413,8 @@ public class StrategySimulation {
 		atePower = false;
 		if (gameState.wasPowerPillEaten()) {
 			// Don't eat power pills during ghost-score selection
-			illegalPP = (selectionType == SelectionType.GhostScore);
+			// Don't eat a power pill while a ghost is in the lair (it wont turn blue)
+			illegalPP = (selectionType == SelectionType.GhostScore);// || ghostsInlair > 0;
 			// Further OK!
 			atePower = true;
 		}

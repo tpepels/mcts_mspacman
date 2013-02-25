@@ -43,21 +43,21 @@ public class Settings {
 		defSettings.maxSimulations[0] = 75;
 		//
 		defSettings.safetyT[0] = .75;
-		defSettings.ghostSelectScore[0] = .5;
+		defSettings.ghostSelectScore[0] = .45;
 		defSettings.reversePenalty[0] = .9;
 		defSettings.discount[0] = .7;
 		//
-		defSettings.uctC[0] = .9;
+		defSettings.uctC[0] = .75;
 		defSettings.minVisits[0] = 10;
 		//
 		defSettings.ppPenalty1[0] = .5;
 		defSettings.ppPenalty2[0] = .2;
 		//
 		defSettings.pacEpsilon[0] = .8;
-		defSettings.ghostEpsilon[0] = .8;
+		defSettings.ghostEpsilon[0] = .7;
 		//
-		defSettings.alpha_pill[0] = .4;
-		defSettings.alpha_ghosts[0] = .3;
+		defSettings.alpha_pill[0] = .6;
+		defSettings.alpha_ghosts[0] = .4;
 		//
 		defSettings.tree_reuse = true;
 		defSettings.tree_decay = true;
