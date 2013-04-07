@@ -11,7 +11,7 @@ import static pacman.game.Constants.*;
 /*
  * Same as NearestPillPacMan but does some visuals to illustrate what can be done.
  * Please note: the visuals are just to highlight different functionalities and may
- * not make sense from a controller's point of view (i.e., they might not be useful)
+ * not make sense from a controller"s point of view (i.e., they might not be useful)
  * Comment/un-comment code below as desired (drawing all visuals would probably be too much).
  */
 public final class NearestPillPacManVS extends Controller<MOVE>

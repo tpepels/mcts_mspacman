@@ -43,7 +43,7 @@ import static pacman.game.Constants.*;
 public final class Game {
 	// pills stored as bitsets for efficient copying
 	private BitSet pills, powerPills;
-	// all the game's variables
+	// all the game"s variables
 	private int mazeIndex, levelCount, currentLevelTime, totalTime, score, ghostEatMultiplier,
 			timeOfLastGlobalReversal;
 	private boolean gameOver, pacmanWasEaten, pillWasEaten, powerPillWasEaten;
@@ -53,7 +53,7 @@ public final class Game {
 	private PacMan pacman;
 	private EnumMap<GHOST, Ghost> ghosts;
 
-	// mazes are only loaded once since they don't change over time
+	// mazes are only loaded once since they don"t change over time
 	private static Maze[] mazes = new Maze[NUM_MAZES];;
 
 	private Maze currentMaze;
@@ -251,7 +251,7 @@ public final class Game {
 
 	/**
 	 * Sets the game state from a string: the inverse of getGameState(). It
-	 * reconstructs all the game's variables from the string.
+	 * reconstructs all the game"s variables from the string.
 	 * 
 	 * @param gameState
 	 *            The game state represented as a string
@@ -822,7 +822,7 @@ public final class Game {
 	 * 
 	 * @param nodeIndex
 	 *            The node index
-	 * @return The node's y coordinate
+	 * @return The node"s y coordinate
 	 */
 	public int getNodeYCood(int nodeIndex) {
 		return currentMaze.graph[nodeIndex].y;

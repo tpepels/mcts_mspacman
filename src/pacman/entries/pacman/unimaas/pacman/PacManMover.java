@@ -187,7 +187,7 @@ public class PacManMover implements PacManMoveGenerator {
 
 		int target = pacHeading;
 		pacDistance = graph[pacJunction][pacMove.ordinal()].length + 1;
-		// If there is a power pill on the edge, the target to measure is that powerpill's location
+		// If there is a power pill on the edge, the target to measure is that powerpill"s location
 		if (graph[pacJunction][pacMove.ordinal()].powerPill) {
 			if (gameState
 					.isPowerPillStillAvailable(graph[pacJunction][pacMove.ordinal()].powerPillIndex)) {
@@ -251,7 +251,7 @@ public class PacManMover implements PacManMoveGenerator {
 			return -1;
 		}
 	}
-	
+
 	public MOVE generatePacManMove(SelectionType selectionType) {
 		safety = -1;
 		pacLocation = gameState.getPacmanCurrentNodeIndex();
@@ -285,12 +285,9 @@ public class PacManMover implements PacManMoveGenerator {
 			int blueGhost = -1;
 			MOVE closerToBlue = MOVE.NEUTRAL;
 			// Epsilon greedy ghost move
-			if (XSRandom.r.nextDouble() < epsilon) {
-				blueGhost = closestBlueGhost();
-				if (blueGhost > -1) {
-					closerToBlue = gameState.getNextMoveTowardsTarget(pacLocation, blueGhost,
-							DM.PATH);
-				}
+			blueGhost = closestBlueGhost();
+			if (blueGhost > -1) {
+				closerToBlue = gameState.getNextMoveTowardsTarget(pacLocation, blueGhost, DM.PATH);
 			}
 			//
 			int l = 0;
@@ -318,8 +315,8 @@ public class PacManMover implements PacManMoveGenerator {
 					// debugDGameState = dGame.copy();
 					return safeMoves2[j];
 				}
-				// Don't visit an edge twice unless it is unavoidable
-				try{
+				// Don"t visit an edge twice unless it is unavoidable
+				try {
 					if (dGame.getPacmanEdgeVisited(junction[safeMoves2[j].ordinal()].uniqueId)
 							|| safeMoves2[j] == reverse) {
 						continue;
@@ -333,7 +330,7 @@ public class PacManMover implements PacManMoveGenerator {
 			}
 
 			MOVE nextDir = MOVE.NEUTRAL;
-			if (m > 0) {
+			if (m > 0 && XSRandom.r.nextDouble() < epsilon) {
 				// There is a completely safe path, that was not visited
 				// before
 				nextDir = moves[XSRandom.r.nextInt(m)];
@@ -343,7 +340,6 @@ public class PacManMover implements PacManMoveGenerator {
 				// debugDGameState = dGame.copy();
 				// System.out.println("[1] Selected " + nextDir + " T: " + gameState.getCurrentLevelTime() + " L: "
 				// + gameState.getPacmanCurrentNodeIndex());
-
 			} else if (l > 0) {
 				// No safe path that was not visited before,
 				// but safe path available that was visited before
@@ -424,7 +420,7 @@ public class PacManMover implements PacManMoveGenerator {
 	}
 
 	private boolean nearPowerPill(int pacLoc) {
-		if (dGame.getCurrentPacmanEdge().powerPill) {
+		if (dGame.getCurrentPacmanEdge() != null && dGame.getCurrentPacmanEdge().powerPill) {
 			powerPills = gameState.getActivePowerPillsIndices();
 			if (powerPills.length > 0) {
 				for (int i = 0; i < powerPills.length; i++) {

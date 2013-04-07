@@ -375,7 +375,7 @@ public class DiscreteGame {
 	 *            The move pacman made at the current junction
 	 */
 	public void pacMove(int junction, MOVE move) {
-		// Reset the pacman's reversed status
+		// Reset the pacman"s reversed status
 		this.pacManReversalStatus = false;
 		this.timeOnCurrentEdge = 0;
 		this.pacManReversed = false;
@@ -430,7 +430,7 @@ public class DiscreteGame {
 			currentMaze = newMaze;
 			// Make sure the new maze graph exists
 			setCurrentGraph(gameState);
-			// Reset the game's history
+			// Reset the game"s history
 			pacmanEdgesVisited = new boolean[highestEdgeId[currentMaze]];
 			pillsEatenEdge = new int[highestEdgeId[currentMaze]];
 			ghostJunctions = new int[] { -1, -1, -1, -1 };

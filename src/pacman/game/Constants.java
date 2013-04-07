@@ -57,7 +57,7 @@ public final class Constants {
 	/**
 	 * DM stands for Distance Metric, a simple enumeration for use with methods that require a distance metric. The
 	 * metric available are as follows: PATH: the actual path distance (i.e., number of step required to reach target)
-	 * EUCLID: Euclidean distance using the nodes' x and y coordinates MANHATTAN: Manhattan distance (absolute distance
+	 * EUCLID: Euclidean distance using the nodes" x and y coordinates MANHATTAN: Manhattan distance (absolute distance
 	 * between x and y coordinates)
 	 */
 	public enum DM {
@@ -86,11 +86,13 @@ public final class Constants {
 												// event to take place
 	public static final int NUM_GHOSTS = 4; // number of ghosts in the game
 	public static final int NUM_MAZES = 4; // number of different mazes in the game
-	public static final int DELAY = 40; // delay (in milliseconds) between game advancements
 	// For real dawg
+	public static final int DELAY = 40; // delay (in milliseconds) between game advancements
 	public static final int NUM_LIVES = 3; // total number of lives Ms Pac-Man has (current + NUM_LIVES-1 spares)
-	public static final int EXTRA_LIFE_SCORE = 10000; // extra life is awarded when this many points have been collected
+	public static final int EXTRA_LIFE_SCORE = 10000; // extra life is awarded when this many points have been
+	// collected
 	// For testing
+	// public static final int DELAY = 40; // delay (in milliseconds) between game advancements
 	// public static final int NUM_LIVES = 1; // total number of lives Ms Pac-Man has (current + NUM_LIVES-1 spares)
 	// public static final int EXTRA_LIFE_SCORE = 10000000; // extra life is awarded when this many points have been
 	// collected

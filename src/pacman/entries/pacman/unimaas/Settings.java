@@ -21,16 +21,16 @@ public class Settings {
 	public double[] uctC;
 	// The minimum number of visits for UCT
 	public double[] minVisits;
-	// PowerPill penalties (to few ghosts, no ghosts)
-	public double[] ppPenalty1, ppPenalty2;
 	// Epsilon-greedy values for pacman and ghosts
 	public double[] pacEpsilon, ghostEpsilon;
-	// Alpha values for re-use
-	public double[] alpha_pill, alpha_ghosts;
+	// For simulations
+	public double[] pillPower, minSteps;
+	// For max backprop
+	public double[] minChildVisitRate, depthIncrease;
 
 	// On/off settings for disabling certain enhancements
 	public boolean tree_reuse, tree_decay, tree_var_depth, strategic_playout, last_good_config,
-			enable_trailghost, max_selection;
+			enable_trailghost, max_selection, no_alpha, no_surv_reuse;
 	// Different opponents
 	public String opponent;
 	//
@@ -40,24 +40,24 @@ public class Settings {
 		Settings defSettings = new Settings();
 		//
 		defSettings.maxPathLength[0] = 40;
-		defSettings.maxSimulations[0] = 75;
+		defSettings.maxSimulations[0] = 60;
 		//
-		defSettings.safetyT[0] = .75;
-		defSettings.ghostSelectScore[0] = .45;
-		defSettings.reversePenalty[0] = .9;
-		defSettings.discount[0] = .7;
+		defSettings.safetyT[0] = .6;
+		defSettings.ghostSelectScore[0] = .5;
+		defSettings.reversePenalty[0] = .8;
+		defSettings.discount[0] = .9;
 		//
-		defSettings.uctC[0] = .75;
-		defSettings.minVisits[0] = 10;
-		//
-		defSettings.ppPenalty1[0] = .5;
-		defSettings.ppPenalty2[0] = .2;
+		defSettings.uctC[0] = 1.0;
+		defSettings.minVisits[0] = 15;
 		//
 		defSettings.pacEpsilon[0] = .8;
-		defSettings.ghostEpsilon[0] = .7;
+		defSettings.ghostEpsilon[0] = .9;
 		//
-		defSettings.alpha_pill[0] = .6;
-		defSettings.alpha_ghosts[0] = .4;
+		defSettings.pillPower[0] = 1.1;
+		defSettings.minSteps[0] = 2;
+		//
+		defSettings.minChildVisitRate[0] = .9;
+		defSettings.depthIncrease[0] = .0;
 		//
 		defSettings.tree_reuse = true;
 		defSettings.tree_decay = true;
@@ -66,8 +66,11 @@ public class Settings {
 		defSettings.last_good_config = true;
 		defSettings.enable_trailghost = false;
 		defSettings.max_selection = true;
+		defSettings.no_alpha = true;
+		defSettings.no_surv_reuse = false;
 		//
 		defSettings.opponent = "pacman.controllers.examples.Legacy2TheReckoning";
+//		defSettings.opponent = "pacman.opponents.Ghosts.eiisolver.MyGhost";
 		return defSettings;
 	}
 
@@ -83,14 +86,14 @@ public class Settings {
 		uctC = new double[1];
 		minVisits = new double[1];
 		//
-		ppPenalty1 = new double[1];
-		ppPenalty2 = new double[1];
-		//
 		pacEpsilon = new double[1];
 		ghostEpsilon = new double[1];
 		//
-		alpha_pill = new double[1];
-		alpha_ghosts = new double[1];
+		pillPower = new double[1];
+		minSteps = new double[1];
+		//
+		minChildVisitRate = new double[1];
+		depthIncrease = new double[1];
 	}
 
 	public void setPropertiesList() {
@@ -103,12 +106,12 @@ public class Settings {
 		properties.add(discount);
 		properties.add(uctC);
 		properties.add(minVisits);
-		properties.add(ppPenalty1);
-		properties.add(ppPenalty2);
 		properties.add(pacEpsilon);
 		properties.add(ghostEpsilon);
-		properties.add(alpha_pill);
-		properties.add(alpha_ghosts);
+		properties.add(pillPower);
+		properties.add(minSteps);
+		properties.add(minChildVisitRate);
+		properties.add(depthIncrease);
 	}
 
 	public static Settings deserializeSettings(String file) throws IOException {

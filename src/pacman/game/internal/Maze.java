@@ -12,7 +12,7 @@ import static pacman.game.Constants.*;
 /*
  * Stores the actual mazes, each of which is simply a connected graph. The differences between the mazes are the connectivity
  * and the x,y coordinates (used for drawing or to compute the Euclidean distance. There are 3 built-in distance functions in
- * total: Euclidean, Manhattan and Dijkstra's shortest path distance. The latter is pre-computed and loaded, the others are
+ * total: Euclidean, Manhattan and Dijkstra"s shortest path distance. The latter is pre-computed and loaded, the others are
  * computed on the fly whenever getNextDir(-) is called.
  */
 public final class Maze
@@ -25,8 +25,8 @@ public final class Maze
 	
 	/*
 	 * Each maze is stored as a (connected) graph: all nodes have neighbours, stored in an array of length 4. The
-	 * index of the array associates the direction the neighbour is located at: '[up,right,down,left]'.
-	 * For instance, if node '9' has neighbours '[-1,12,-1,6]', you can reach node '12' by going right, and node
+	 * index of the array associates the direction the neighbour is located at: "[up,right,down,left]".
+	 * For instance, if node "9" has neighbours "[-1,12,-1,6]", you can reach node "12" by going right, and node
 	 * 6 by going left. The directions returned by the controllers should thus be in {0,1,2,3} and can be used
 	 * directly to determine the next node to go to.
 	 */		

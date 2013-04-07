@@ -10,8 +10,8 @@ import java.io.PrintWriter;
 /**
  * This class handles the I/O for the controllers. It has two static methods that allow
  * controller to load files and to write those files. All these files need to be in the 
- * directory 'myData': when running locally, this directory needs to be at the same level
- * as the 'src' directory. In the competition, this directory should be included with the source
+ * directory "myData": when running locally, this directory needs to be at the same level
+ * as the "src" directory. In the competition, this directory should be included with the source
  * files, at the same level.
  * 
  * If you use I/O in your controller, you must make use of this class. The reason for this is

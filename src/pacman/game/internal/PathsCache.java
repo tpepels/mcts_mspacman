@@ -112,7 +112,7 @@ public class PathsCache
 		if(a==b)
 			return new int[]{};
 
-		//first, go to closest junction (there is only one since we can't reverse)
+		//first, go to closest junction (there is only one since we can"t reverse)
 		JunctionData fromJunction = nodes[a].getNearestJunction(lastMoveMade);
 		
 		//if target is on the way to junction, then we are done

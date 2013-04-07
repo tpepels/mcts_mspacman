@@ -3,7 +3,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 public class TestGen {
-	private static final int numTrials = 25;
+	private static final int numTrials = 200;
 	private static PrintWriter out;
 
 	/**

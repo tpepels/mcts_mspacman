@@ -34,10 +34,12 @@ import static pacman.game.Constants.*;
 public class Executor {
 	private static MyPacMan pacman = null;
 	private static Controller<EnumMap<GHOST, MOVE>> ghosts = null;
+	private static Class<?> ghostClass;
 	private static int numTrials = 0;
 	private static boolean printall = false;
 	private static Settings setting = null;
 	private static long seed = -1;
+	//
 
 	/**
 	 * The main method. Several options are listed - simply remove comments to use the option you want.
@@ -50,10 +52,27 @@ public class Executor {
 
 		if (args.length == 0) {
 			setting = Settings.getDefaultSetting();
-
 			MyPacMan pm = new MyPacMan();
 			pm.loadSettings(setting);
-			exec.runGame(pm, new Legacy2TheReckoning(), true, Constants.DELAY);
+			try {
+				// Super safety ...
+				if (setting.opponent.toLowerCase().equals(
+						"pacman.controllers.examples.legacy2thereckoning")
+						|| setting.opponent.toLowerCase().equals(
+								"pacman.opponents.ghosts.ghostbuster.myghosts")
+						|| setting.opponent.toLowerCase().equals(
+								"pacman.opponents.ghosts.memetix.myghosts")
+						|| setting.opponent.toLowerCase().equals(
+								"pacman.opponents.ghosts.eiisolver.myghosts")) {
+					System.out.println("Opponent: " + setting.opponent);
+					ghostClass = Class.forName(setting.opponent);
+					ghosts = (Controller<EnumMap<GHOST, MOVE>>) Class.forName(setting.opponent)
+							.newInstance();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			exec.runGame(pm, ghosts, true, Constants.DELAY);
 			return;
 		} else if (args.length == 1) {
 			try {
@@ -109,12 +128,12 @@ public class Executor {
 					|| setting.opponent.toLowerCase().equals(
 							"pacman.opponents.ghosts.ghostbuster.myghosts")
 					|| setting.opponent.toLowerCase().equals(
-							"pacman.opponents.ghosts.memetix.myghost")
+							"pacman.opponents.ghosts.memetix.myghosts")
 					|| setting.opponent.toLowerCase().equals(
-							"pacman.opponents.ghosts.eiisolver.myghost")) {
+							"pacman.opponents.ghosts.eiisolver.myghosts")) {
 				System.out.println("Opponent: " + setting.opponent);
-				ghosts = (Controller<EnumMap<GHOST, MOVE>>) Class.forName(setting.opponent)
-						.newInstance();
+				ghostClass = Class.forName(setting.opponent);
+				ghosts = (Controller<EnumMap<GHOST, MOVE>>) ghostClass.newInstance();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -136,7 +155,7 @@ public class Executor {
 		while (index < properties.size() && properties.get(index).length <= 1) {
 			index++;
 		}
-		// Check if we're not at the end
+		// Check if we"re not at the end
 		if (index < properties.size()) {
 			double[] prop = properties.get(index);
 			// Needed to reset it later
@@ -148,6 +167,7 @@ public class Executor {
 				writeOutput(name + " value: " + prop[i]);
 				//
 				if (!loopNextProperty(properties, index + 1)) {
+					pacman = new MyPacMan();
 					pacman.loadSettings(setting);
 					runExperiment(pacman, ghosts, numTrials, printall);
 					noLoop = false;
@@ -156,7 +176,7 @@ public class Executor {
 			prop[0] = firstVal;
 			return true;
 		} else {
-			// We've reached the end of the list
+			// We"ve reached the end of the list
 			return false;
 		}
 	}
@@ -174,6 +194,7 @@ public class Executor {
 		System.out.println(output);
 	}
 
+	@SuppressWarnings("unchecked")
 	public static void runExperiment(Controller<MOVE> pacManController,
 			Controller<EnumMap<GHOST, MOVE>> ghostController, int trials, boolean printall) {
 		double avgScore = 0, maxScore = 0, minScore = Double.POSITIVE_INFINITY, S;
@@ -194,6 +215,11 @@ public class Executor {
 			XSRandom.r.setSeed(mySeed);
 			game = new Game(mySeed);
 			errorCount = 0;
+			try {
+				ghosts = (Controller<EnumMap<GHOST, MOVE>>) ghostClass.newInstance();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			//
 			while (!game.gameOver()) {
 				try {

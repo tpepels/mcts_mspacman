@@ -30,7 +30,7 @@ public abstract class Controller<T> implements Runnable
 	}
 
 	/**
-	 * Terminates the controller: a signal is sent and the flag 'alive' is set to false. When
+	 * Terminates the controller: a signal is sent and the flag "alive" is set to false. When
 	 * the thread wakes up, the outer loop will terminate and the thread finishes.
 	 */
 	public final void terminate()
@@ -66,7 +66,7 @@ public abstract class Controller<T> implements Runnable
 	/**
 	 * Retrieves the move from the controller (whatever is stored in the class variable).
 	 *
-	 * @return The move stored in the class variable 'lastMove'
+	 * @return The move stored in the class variable "lastMove"
 	 */
 	public final T getMove()
 	{

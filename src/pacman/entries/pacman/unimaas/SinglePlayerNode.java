@@ -125,7 +125,7 @@ public class SinglePlayerNode extends MCTNode {
 					//
 					died = (newMoves.length == 0);
 					if (currentMaze != newState.getMazeIndex()) {
-						// Don't generate any children, a fast heuristic move
+						// Don"t generate any children, a fast heuristic move
 						// should be made.
 						nextMaze = true;
 						break;

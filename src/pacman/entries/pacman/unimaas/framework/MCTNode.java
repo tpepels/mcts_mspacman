@@ -12,6 +12,7 @@ import pacman.game.Game;
  */
 public abstract class MCTNode {
 	public static final int PILL_I = 0, GHOST_I = 1, SURV_I = 2;
+	public static boolean noalpha = false, no_surv_reuse = false;
 	// Gamestates
 	protected Game gameState;
 	private DiscreteGame dGame;
@@ -81,42 +82,63 @@ public abstract class MCTNode {
 		newMaxScores = new double[3];
 	}
 
+	// The children of a node should represent at least this part of the node"s visits.
+	public static double minChildVisitRate = .5;
+
 	public void backPropagate(MCTResult result, SelectionType selectionType, int treePhaseDepth) {
 		MCTNode node = this;
-		node.addValue(result);
-		if (node.depth > treePhaseDepth && result.target) {
-			node.newScores[SURV_I]--;
+		if (node.depth > treePhaseDepth) {
+			node.newVisitCount--;
+		} else {
+			node.addValue(result);
 		}
 		node = node.getParent();
-
 		while (node != null) {
-			// Update the node's values (Average Back-propagation)
-			node.addValue(result);
-			if (node.depth > treePhaseDepth && result.target) {
-				node.newScores[SURV_I]--;
+			if (node.depth > treePhaseDepth) {
+				node.newVisitCount--;
+				node = node.getParent();
+				continue;
 			}
+			// Update the node"s values (Average Back-propagation)
+			node.addValue(result);
 			// Maximum back-propagate the values of the child with the highest score
 			MCTNode topChild = null;
-			double topRate = Double.NEGATIVE_INFINITY;
+			double childrenVCount = 0.;
+			double topRate = Double.NEGATIVE_INFINITY;// , myRate = Double.NEGATIVE_INFINITY;
 			for (MCTNode child : node.getChildren()) {
+				childrenVCount += child.newVisitCount;
 				//
 				if (selectionType == SelectionType.SurvivalRate) {
+					// myRate = node.getAlphaSurvivalScore(false);
 					if (child.getAlphaSurvivalScore(true) > topRate) {
 						topChild = child;
 						topRate = topChild.getAlphaSurvivalScore(true);
 					}
 				} else if (selectionType == SelectionType.PillScore) {
+					// myRate = node.getAlphaPillScore(false);
 					if (child.getAlphaPillScore(true) > topRate) {
 						topChild = child;
 						topRate = child.getAlphaPillScore(true);
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
+					// myRate = node.getAlphaGhostScore(false);
 					if (child.getAlphaGhostScore(true) > topRate) {
 						topChild = child;
 						topRate = child.getAlphaGhostScore(true);
 					}
 				}
 			}
+			//
+			if (childrenVCount / node.newVisitCount < minChildVisitRate || topChild == null) {
+				node.oldMaxScores = node.oldScores;
+				node.newMaxScores = node.newScores;
+				//
+				node.oldMaxVisitCount = node.oldVisitCount;
+				node.newMaxVisitCount = node.newVisitCount;
+				node = node.getParent();
+				continue;
+			}
+
 			node.oldMaxScores = topChild.oldMaxScores;
 			node.newMaxScores = topChild.newMaxScores;
 			//
@@ -129,15 +151,27 @@ public abstract class MCTNode {
 
 	public void propagateMaxValues(SelectionType selectionType) {
 		if (!isLeaf()) {
+			double childrenVCount = 0.;
+			//
 			for (MCTNode c : children) {
+				childrenVCount += c.newVisitCount;
 				if (c.isLeaf()) {
 					continue;
 				}
 				c.propagateMaxValues(selectionType);
 			}
+			// // The children didn"t have enough visits compared to this node.
+			if (childrenVCount / newVisitCount < minChildVisitRate) {
+				oldMaxScores = oldScores;
+				newMaxScores = newScores;
+				//
+				oldMaxVisitCount = oldVisitCount;
+				newMaxVisitCount = newVisitCount;
+				return;
+			}
 			//
 			MCTNode topChild = null;
-			double topRate = Double.NEGATIVE_INFINITY, myRate = Double.NEGATIVE_INFINITY;
+			double topRate = Double.NEGATIVE_INFINITY;// , myRate = Double.NEGATIVE_INFINITY;
 			//
 			for (MCTNode child : children) {
 				// Do not use values of unvisited children
@@ -145,26 +179,26 @@ public abstract class MCTNode {
 					continue;
 				}
 				if (selectionType == SelectionType.SurvivalRate) {
+					// myRate = getAlphaSurvivalScore(false);
 					if (child.getAlphaSurvivalScore(true) > topRate) {
 						topChild = child;
-						myRate = getAlphaSurvivalScore(false);
 						topRate = topChild.getAlphaSurvivalScore(true);
 					}
 				} else if (selectionType == SelectionType.PillScore) {
+					// myRate = getAlphaPillScore(false);
 					if (child.getAlphaPillScore(true) > topRate) {
 						topChild = child;
-						myRate = getAlphaPillScore(false);
 						topRate = child.getAlphaPillScore(true);
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
+					// myRate = getAlphaGhostScore(false);
 					if (child.getAlphaGhostScore(true) > topRate) {
 						topChild = child;
-						myRate = getAlphaGhostScore(false);
 						topRate = child.getAlphaGhostScore(true);
 					}
 				}
 			}
-			if (topChild == null || topRate < myRate) {
+			if (topChild == null) {
 				oldMaxScores = oldScores;
 				newMaxScores = newScores;
 				//
@@ -183,15 +217,26 @@ public abstract class MCTNode {
 
 	public void propagateMaxValues(SelectionType selectionType, double minRate) {
 		if (!isLeaf()) {
+			double childrenVCount = 0.;
 			for (MCTNode c : children) {
+				childrenVCount += c.newVisitCount;
 				if (c.isLeaf()) {
 					continue;
 				}
 				c.propagateMaxValues(selectionType, minRate);
 			}
+			// The children didn"t have enough visits compared to this node.
+			if (childrenVCount / newVisitCount < minChildVisitRate) {
+				oldMaxScores = oldScores;
+				newMaxScores = newScores;
+				//
+				oldMaxVisitCount = oldVisitCount;
+				newMaxVisitCount = newVisitCount;
+				return;
+			}
 			//
 			MCTNode topChild = null;
-			double topRate = Double.NEGATIVE_INFINITY;
+			double topRate = Double.NEGATIVE_INFINITY;// , myRate = Double.NEGATIVE_INFINITY;
 			//
 			for (MCTNode child : children) {
 				// Do not use values of unvisited children
@@ -200,16 +245,19 @@ public abstract class MCTNode {
 					continue;
 				}
 				if (selectionType == SelectionType.SurvivalRate) {
+					// myRate = getAlphaSurvivalScore(false);
 					if (child.getAlphaSurvivalScore(true) > topRate) {
 						topChild = child;
 						topRate = topChild.getAlphaSurvivalScore(true);
 					}
 				} else if (selectionType == SelectionType.PillScore) {
+					// myRate = getAlphaPillScore(false);
 					if (child.getAlphaPillScore(true) > topRate) {
 						topChild = child;
 						topRate = child.getAlphaPillScore(true);
 					}
 				} else if (selectionType == SelectionType.GhostScore) {
+					// myRate = getAlphaGhostScore(false);
 					if (child.getAlphaGhostScore(true) > topRate) {
 						topChild = child;
 						topRate = child.getAlphaGhostScore(true);
@@ -344,10 +392,10 @@ public abstract class MCTNode {
 		oldScores[SURV_I] += newScores[SURV_I];
 		oldVisitCount += newVisitCount;
 		//
-		oldScores[PILL_I] *= discount;
-		oldScores[GHOST_I] *= discount;
-		oldScores[SURV_I] *= discount;
-		oldVisitCount *= discount;
+		oldScores[PILL_I] *= Math.pow(discount, depth);
+		oldScores[GHOST_I] *= Math.pow(discount, depth);
+		oldScores[SURV_I] *= Math.pow(discount, depth);
+		oldVisitCount *= Math.pow(discount, depth);
 		// Reset the maximum scores, they should be reset later.
 		oldMaxScores = new double[3];
 		oldMaxVisitCount = 0;
@@ -429,13 +477,13 @@ public abstract class MCTNode {
 	MOVE[] moves;
 
 	/**
-	 * Does a simulation using the rootnode's game state followed by actions up to this node's position
+	 * Does a simulation using the rootnode"s game state followed by actions up to this node"s position
 	 * 
 	 * @param simulation The simulation-class to use for simulating the playout
 	 */
 	public MCTResult simulate(StrategySimulation simulation, int simCount, int pathLength,
 			SelectionType selectionType, boolean strategic) {
-		// Do a simulation starting at the root's game state
+		// Do a simulation starting at the root"s game state
 		selectedNode = this;
 		pacLocations = new int[selectedNode.depth + 1];
 		moves = new MOVE[selectedNode.depth];
@@ -449,7 +497,7 @@ public abstract class MCTNode {
 		if (selectedNode.junctionIndex > -1) {
 			pacLocations[i] = selectedNode.getJunctionIndex();
 		}
-		// Get the root's game states
+		// Get the root"s game states
 		Game interState = selectedNode.getGameState().copy();
 		DiscreteGame disGame = selectedNode.getdGame().copy();
 		//
@@ -458,19 +506,27 @@ public abstract class MCTNode {
 	}
 
 	public double getAlphaSurvivalScore(boolean max) {
-		if (max) {
-			if (oldMaxVisitCount + newMaxVisitCount > 0) {
-				return (UCTSelection.alpha_g * oldMaxScores[SURV_I] + (1. - UCTSelection.alpha_g)
-						* newMaxScores[SURV_I])
-						/ (UCTSelection.alpha_g * oldMaxVisitCount + (1. - UCTSelection.alpha_g)
-								* newMaxVisitCount);
+		if (no_surv_reuse) {
+			if (max) {
+				if (newMaxVisitCount > 0) {
+					return newMaxScores[SURV_I] / newMaxVisitCount;
+				}
+			} else {
+				if (newVisitCount > 0) {
+					return newScores[SURV_I] / newVisitCount;
+				}
 			}
 		} else {
-			if (oldVisitCount + newVisitCount > 0) {
-				return (UCTSelection.alpha_g * oldScores[SURV_I] + (1. - UCTSelection.alpha_g)
-						* newScores[SURV_I])
-						/ (UCTSelection.alpha_g * oldVisitCount + (1. - UCTSelection.alpha_g)
-								* newVisitCount);
+			if (max) {
+				if (oldMaxVisitCount + newMaxVisitCount > 0) {
+					return (oldMaxScores[SURV_I] + newMaxScores[SURV_I])
+							/ (oldMaxVisitCount + newMaxVisitCount);
+				}
+			} else {
+				if (oldVisitCount + newVisitCount > 0) {
+					return (oldScores[SURV_I] + newScores[SURV_I])
+							/ (oldVisitCount + newVisitCount);
+				}
 			}
 		}
 		return 0;
@@ -479,40 +535,42 @@ public abstract class MCTNode {
 	public double getAlphaPillScore(boolean max) {
 		if (max) {
 			if (oldMaxVisitCount + newMaxVisitCount > 0) {
-				return ((UCTSelection.alpha_ps * oldMaxScores[PILL_I] + (1. - UCTSelection.alpha_ps)
-						* newMaxScores[PILL_I]) / (UCTSelection.alpha_ps * oldMaxVisitCount + (1. - UCTSelection.alpha_ps)
-						* newMaxVisitCount))
+				return ((oldMaxScores[PILL_I] + newMaxScores[PILL_I]) / (oldMaxVisitCount + newMaxVisitCount))
 						* getAlphaSurvivalScore(max);
 			}
 		} else {
 			if (oldVisitCount + newVisitCount > 0) {
-				return ((UCTSelection.alpha_ps * oldScores[PILL_I] + (1. - UCTSelection.alpha_ps)
-						* newScores[PILL_I]) / (UCTSelection.alpha_ps * oldVisitCount + (1. - UCTSelection.alpha_ps)
-						* newVisitCount))
+				return ((oldScores[PILL_I] + newScores[PILL_I]) / (oldVisitCount + newVisitCount))
 						* getAlphaSurvivalScore(max);
 			}
 		}
+
 		return 0;
 	}
 
 	public double getAlphaGhostScore(boolean max) {
 		if (max) {
-			if (oldMaxVisitCount + newMaxVisitCount > 0) {
-				return ((UCTSelection.alpha_g * oldMaxScores[GHOST_I] + (1. - UCTSelection.alpha_g)
-						* newMaxScores[GHOST_I]) / (UCTSelection.alpha_g * oldMaxVisitCount + (1. - UCTSelection.alpha_g)
-						* newMaxVisitCount))
-						* getAlphaSurvivalScore(max);
+			if (newMaxVisitCount > 0) {
+				return (newMaxScores[GHOST_I] / newMaxVisitCount) * getAlphaSurvivalScore(max);
 			}
 		} else {
-			if (oldVisitCount + newVisitCount > 0) {
-				return ((UCTSelection.alpha_g * oldScores[GHOST_I] + (1. - UCTSelection.alpha_g)
-						* newScores[GHOST_I]) / (UCTSelection.alpha_g * oldVisitCount + (1. - UCTSelection.alpha_g)
-						* newVisitCount))
-						* getAlphaSurvivalScore(max);
+			if (newMaxVisitCount > 0) {
+				return (newScores[GHOST_I] / newVisitCount) * getAlphaSurvivalScore(max);
 			}
 		}
-
 		return 0;
+		// if (max) {
+		// if (oldMaxVisitCount + newMaxVisitCount > 0) {
+		// return ((oldMaxScores[GHOST_I] + newMaxScores[GHOST_I]) / (oldMaxVisitCount + newMaxVisitCount))
+		// * getAlphaSurvivalScore(max);
+		// }
+		// } else {
+		// if (oldVisitCount + newVisitCount > 0) {
+		// return ((oldScores[GHOST_I] + newScores[GHOST_I]) / (oldVisitCount + newVisitCount))
+		// * getAlphaSurvivalScore(max);
+		// }
+		// }
+		// return 0;
 	}
 
 	// These are helper functions to get info from the reward vectors by index
@@ -663,7 +721,7 @@ public abstract class MCTNode {
 	public void validate(Game game) {
 		if (isRoot() && children != null) {
 			if (junctionIndex != -1) {
-				// Check if this is actually pacman's position
+				// Check if this is actually pacman"s position
 				if (game.getPacmanCurrentNodeIndex() != junctionIndex) {
 					System.err.println("Error at root, pacman is not on junction.");
 				}
@@ -688,7 +746,7 @@ public abstract class MCTNode {
 			}
 		} else if (children != null && children.length > 0) {
 			if (oldVisitCount > parent.oldVisitCount) {
-				System.err.println("My visitcount is higher than parent's, pathlength: "
+				System.err.println("My visitcount is higher than parents, pathlength: "
 						+ pathLength);
 				if (parent.isRoot())
 					System.err.println("Parent is root");

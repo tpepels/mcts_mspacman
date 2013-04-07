@@ -54,7 +54,7 @@ public class PinchGhostMover implements GhostMoveGenerator {
 		pacFront = dGame.getPacHeading();
 		pacRear = dGame.getPacRear();
 		pacLoc = gameState.getPacmanCurrentNodeIndex();
-		// If pacman reversed, don't switch the headings of the ghosts around
+		// If pacman reversed, don"t switch the headings of the ghosts around
 		if (dGame.isPacmanReversed()) {
 			pacFront = pacRear;
 			pacRear = dGame.getPacHeading();
@@ -230,9 +230,14 @@ public class PinchGhostMover implements GhostMoveGenerator {
 			if (g.equals(f)) {
 				continue;
 			}
-			if (current == dGame.getLastGhostJunction(f.ordinal())
-					&& gameState.isGhostEdible(f) == gameState.isGhostEdible(g)) {
-				return true;
+			if (gameState.isGhostEdible(f) == gameState.isGhostEdible(g)) {
+				if (current == gameState.getGhostCurrentNodeIndex(f)) {
+					if (ghostMoves.get(f) != null && ghostMoves.get(f) == move)
+						return true;
+				} else if (current == dGame.getLastGhostJunction(f.ordinal())) {
+					if (move == dGame.getLastGhostMove(f.ordinal()))
+						return true;
+				}
 			}
 		}
 		//
@@ -245,15 +250,20 @@ public class PinchGhostMover implements GhostMoveGenerator {
 			if (g.equals(f)) {
 				continue;
 			}
-			if (current == dGame.getLastGhostJunction(f.ordinal())
-					&& gameState.isGhostEdible(f) == gameState.isGhostEdible(g)) {
-				while (move == dGame.getLastGhostMove(f.ordinal())) {
-					//
-					move = dirs[XSRandom.r.nextInt(dirs.length)];
-					// System.out.println(g + " " + move + " CHANGED DUE TO FULL EDGE");
+			if (gameState.isGhostEdible(f) == gameState.isGhostEdible(g)) {
+				if (current == gameState.getGhostCurrentNodeIndex(f)) {
+					if (ghostMoves.get(f) != null) {
+						while (ghostMoves.get(f) == move) {
+							move = dirs[XSRandom.r.nextInt(dirs.length)];
+						}
+						break;
+					}
+				} else if (current == dGame.getLastGhostJunction(f.ordinal())) {
+					while (move == dGame.getLastGhostMove(f.ordinal())) {
+						move = dirs[XSRandom.r.nextInt(dirs.length)];
+					}
+					break;
 				}
-
-				break;
 			}
 		}
 		//
@@ -342,10 +352,6 @@ public class PinchGhostMover implements GhostMoveGenerator {
 		for (GHOST g : GHOST.values()) {
 			int i = g.ordinal();
 			if (!gameState.isGhostEdible(g) && gameState.getGhostLairTime(g) == 0) {
-
-				ghostJ = dGame.getLastGhostJunction(i);
-				ghostEdge = dGame.getGhostEdgeId(i);
-				ghostHeading = dGame.getGhostHeading(i);
 				//
 				if (g.equals(ghost)) {
 					ghostJ = ghostJunction;
@@ -356,10 +362,22 @@ public class PinchGhostMover implements GhostMoveGenerator {
 					if (ghostHeading == ghostJ) {
 						ghostHeading = graph[ghostJ][moveO].nodes[0];
 					}
+				} else if (gameState.isJunction(gameState.getGhostCurrentNodeIndex(g)) && ghostMoves.get(g) != null) {
+					ghostJ =gameState.getGhostCurrentNodeIndex(g);
+					moveO = ghostMoves.get(g).ordinal();
+					ghostEdge = dGame.getGraph()[ghostJ][moveO].uniqueId;
+					
+					ghostHeading = graph[ghostJ][moveO].nodes[1];
+					if (ghostHeading == ghostJ) {
+						ghostHeading = graph[ghostJ][moveO].nodes[0];
+					}
+				} else {
+					ghostJ = dGame.getLastGhostJunction(i);
+					ghostEdge = dGame.getGhostEdgeId(i);
+					ghostHeading = dGame.getGhostHeading(i);
 				}
 
 				if (ghostJ > 0) {
-
 					if (ghostEdge == pacEdge) {
 						// The ghost is on the same edge as pacman
 						if (ghostHeading == pacFront) {
