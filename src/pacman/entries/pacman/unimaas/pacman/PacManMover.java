@@ -3,7 +3,6 @@ package pacman.entries.pacman.unimaas.pacman;
 import pacman.entries.pacman.unimaas.framework.DiscreteGame;
 import pacman.entries.pacman.unimaas.framework.Edge;
 import pacman.entries.pacman.unimaas.framework.PacManMoveGenerator;
-import pacman.entries.pacman.unimaas.framework.SelectionType;
 import pacman.entries.pacman.unimaas.framework.XSRandom;
 import pacman.game.Constants;
 import pacman.game.Constants.DM;
@@ -252,7 +251,7 @@ public class PacManMover implements PacManMoveGenerator {
 		}
 	}
 
-	public MOVE generatePacManMove(SelectionType selectionType) {
+	public MOVE generatePacManMove() {
 		safety = -1;
 		pacLocation = gameState.getPacmanCurrentNodeIndex();
 		if (gameState.isJunction(pacLocation)) { // More than 2 choices can be

@@ -15,7 +15,6 @@ import pacman.entries.pacman.unimaas.ghosts.PinchGhostMover;
 import pacman.entries.pacman.unimaas.pacman.PacManMover;
 import pacman.entries.pacman.unimaas.pacman.RandomNonRevPacMan;
 import pacman.game.Constants;
-import pacman.game.GameView;
 import pacman.game.Constants.GHOST;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
@@ -36,6 +35,7 @@ public class StrategySimulation {
 	public static int minSteps = 2;
 	public static double pillPower = 1.1;
 	public static boolean trailGhost = false;
+	public static boolean longTerm = true;
 	// public static double sminGhostNorm = .4;
 	// For competition
 	// hardMinGhostNorm = .4, easyMinGhostNorm = .55;
@@ -278,14 +278,18 @@ public class StrategySimulation {
 		}
 		// Determine the ghost score
 		if (ghostsEaten > 0) {
-			if (ghostDivisor == 0) {
-				// Mathemagics!!
-				ghostDivisor = Constants.NUM_GHOSTS
-						* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
-								gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
+			if (longTerm) {
+				if (ghostDivisor == 0) {
+					// Mathemagics!!
+					ghostDivisor = Constants.NUM_GHOSTS
+							* (Constants.EDIBLE_TIME * (Math.pow(Constants.EDIBLE_TIME_REDUCTION,
+									gameState.getCurrentLevel() % Constants.LEVEL_RESET_REDUCTION)));
+				}
+				//
+				ghostNorm = ghostsEaten / ghostDivisor;
+			} else {
+				ghostNorm = ghostsEaten / 4.;
 			}
-			//
-			ghostNorm = ghostsEaten / ghostDivisor;
 		} else if (pwrPillsBefore > gameState.getNumberOfActivePowerPills()) {
 			pillNorm *= .0;
 		}
@@ -339,7 +343,7 @@ public class StrategySimulation {
 		ghostMoves.clear();
 		ghostMoves = ghostMover.generateGhostMoves();
 		if (!followingPath) { // If this is the case, pacmove is predetermined
-			pacMove = pacManMover.generatePacManMove(selectionType);
+			pacMove = pacManMover.generatePacManMove();
 		}
 		gameState.advanceGameWithPowerPillReverseOnly(pacMove, ghostMoves);
 
@@ -371,7 +375,7 @@ public class StrategySimulation {
 			dGame.eatPill();
 			pillsEaten++;
 			// Check if the edge is cleared.
-			if (dGame.getVisitedEdgeCount() > currentEdgesVisited) {
+			if (longTerm && dGame.getVisitedEdgeCount() > currentEdgesVisited) {
 				edgePillsEaten += Math.pow(
 						dGame.getEdgeList()[dGame.getCurrentPacmanEdgeId()].pillCount, pillPower);
 			}
@@ -383,8 +387,12 @@ public class StrategySimulation {
 			// Any number of ghosts were eaten last turn.
 			for (GHOST g : GHOST.values()) {
 				if (gameState.wasGhostEaten(g)) {
-					// Ghost was eaten, get score, and register in dGame.
-					ghostsEaten += edibleTimes[g.ordinal()];
+					if (longTerm) {
+						// Ghost was eaten, get score, and register in dGame.
+						ghostsEaten += edibleTimes[g.ordinal()];
+					} else {
+						ghostsEaten++;
+					}
 					dGame.ghostEaten(g.ordinal());
 				}
 			}
@@ -415,15 +423,15 @@ public class StrategySimulation {
 		pacLocation = gameState.getPacmanCurrentNodeIndex();
 		//
 		for (GHOST g : GHOST.values()) {
-		// Remember the decisions that ghosts made at junctions
-		if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)
-				&& gameState.getTimeOfLastGlobalReversal() != (gameState.getTotalTime() - 1)) {
-			try {
-				dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
-			} catch (Exception ex) {
-				// System.err.println("Ghost on wrong edge in simulation.");
+			// Remember the decisions that ghosts made at junctions
+			if (ghostsAtJunctions[g.ordinal()] && !gameState.wasGhostEaten(g)
+					&& gameState.getTimeOfLastGlobalReversal() != (gameState.getTotalTime() - 1)) {
+				try {
+					dGame.setGhostMove(g.ordinal(), ghostJunctions[g.ordinal()], ghostMoves.get(g));
+				} catch (Exception ex) {
+					// System.err.println("Ghost on wrong edge in simulation.");
+				}
 			}
-		}
 		}
 	}
 

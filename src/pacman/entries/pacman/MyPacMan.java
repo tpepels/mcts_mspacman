@@ -428,6 +428,7 @@ public class MyPacMan extends Controller<MOVE> {
 		MCTNode.minChildVisitRate = setting.minChildVisitRate[0];
 		depthIncrease = setting.depthIncrease[0];
 		//
+		StrategySimulation.longTerm = !setting.no_ltg;
 		StrategySimulation.trailGhost = setting.enable_trailghost;
 		StrategySimulation.minSteps = (int) setting.minSteps[0];
 		StrategySimulation.pillPower = setting.pillPower[0];
@@ -509,6 +510,7 @@ public class MyPacMan extends Controller<MOVE> {
 		return null;
 	}
 
+	long lastPilltime = 0;
 	/**
 	 * Updates the discrete gamestate based on the current gamestate before move-selection
 	 */

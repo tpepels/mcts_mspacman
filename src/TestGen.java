@@ -3,7 +3,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 public class TestGen {
-	private static final int numTrials = 200;
+	private static int numTrials = 200;
 	private static PrintWriter out;
 
 	/**
@@ -17,7 +17,15 @@ public class TestGen {
 			String fullName = listOfFiles[j].getName();
 			String shortName = fullName.substring(0, fullName.length() - 5);
 			createOutFile(shortName);
-			out.print("java -jar MsPacMan.jar " + shortName + ".txt " + numTrials + " config/" + fullName + " false");
+			//
+			if(shortName.toLowerCase().contains("legacy"))
+				numTrials = 100;
+			else if (shortName.toLowerCase().contains("wilsh") || shortName.toLowerCase().contains("flamedragon"))
+				numTrials = 200;
+			else
+				numTrials = 400;
+			//
+			out.print("java -jar MsPacMan.jar " + shortName + ".txt " + numTrials + " config/" + fullName + " true");
 			out.flush();
 			if (out != null)
 				out.close();

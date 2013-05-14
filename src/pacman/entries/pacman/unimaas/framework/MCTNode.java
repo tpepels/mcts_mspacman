@@ -392,10 +392,10 @@ public abstract class MCTNode {
 		oldScores[SURV_I] += newScores[SURV_I];
 		oldVisitCount += newVisitCount;
 		//
-		oldScores[PILL_I] *= Math.pow(discount, depth);
-		oldScores[GHOST_I] *= Math.pow(discount, depth);
-		oldScores[SURV_I] *= Math.pow(discount, depth);
-		oldVisitCount *= Math.pow(discount, depth);
+		oldScores[PILL_I] *= discount;
+		oldScores[GHOST_I] *= discount;
+		oldScores[SURV_I] *= discount;
+		oldVisitCount *= discount;
 		// Reset the maximum scores, they should be reset later.
 		oldMaxScores = new double[3];
 		oldMaxVisitCount = 0;

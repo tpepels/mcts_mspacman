@@ -14,6 +14,7 @@ import java.util.Random;
 import pacman.controllers.*;
 import pacman.controllers.examples.Legacy2TheReckoning;
 import pacman.entries.pacman.MyPacMan;
+import pacman.entries.pacman.SimulationPacMan;
 import pacman.entries.pacman.unimaas.Settings;
 import pacman.entries.pacman.unimaas.framework.*;
 import pacman.game.Constants;
@@ -39,6 +40,7 @@ public class Executor {
 	private static boolean printall = false;
 	private static Settings setting = null;
 	private static long seed = -1;
+
 	//
 
 	/**
@@ -50,20 +52,27 @@ public class Executor {
 	public static void main(String[] args) {
 		Executor exec = new Executor();
 
+//		runExperiment(new SimulationPacMan(), new pacman.opponents.Ghosts.wilsh.MyGhosts(),
+//				400, true);
+
 		if (args.length == 0) {
 			setting = Settings.getDefaultSetting();
 			MyPacMan pm = new MyPacMan();
 			pm.loadSettings(setting);
 			try {
 				// Super safety ...
-				if (setting.opponent.toLowerCase().equals(
-						"pacman.controllers.examples.legacy2thereckoning")
-						|| setting.opponent.toLowerCase().equals(
-								"pacman.opponents.ghosts.ghostbuster.myghosts")
-						|| setting.opponent.toLowerCase().equals(
-								"pacman.opponents.ghosts.memetix.myghosts")
-						|| setting.opponent.toLowerCase().equals(
-								"pacman.opponents.ghosts.eiisolver.myghosts")) {
+				if (setting.opponent
+						.equalsIgnoreCase("pacman.controllers.examples.legacy2thereckoning")
+						|| setting.opponent
+								.equalsIgnoreCase("pacman.opponents.ghosts.ghostbuster.myghosts")
+						|| setting.opponent
+								.equalsIgnoreCase("pacman.opponents.ghosts.memetix.myghosts")
+						|| setting.opponent
+								.equalsIgnoreCase("pacman.opponents.ghosts.eiisolver.myghosts")
+						|| setting.opponent
+								.equalsIgnoreCase("pacman.opponents.Ghosts.flamedragon.myghosts")
+						|| setting.opponent
+								.equalsIgnoreCase("pacman.opponents.Ghosts.wilsh.myghosts")) {
 					System.out.println("Opponent: " + setting.opponent);
 					ghostClass = Class.forName(setting.opponent);
 					ghosts = (Controller<EnumMap<GHOST, MOVE>>) Class.forName(setting.opponent)
@@ -123,14 +132,17 @@ public class Executor {
 		//
 		try {
 			// Super safety ...
-			if (setting.opponent.toLowerCase().equals(
-					"pacman.controllers.examples.legacy2thereckoning")
-					|| setting.opponent.toLowerCase().equals(
-							"pacman.opponents.ghosts.ghostbuster.myghosts")
-					|| setting.opponent.toLowerCase().equals(
-							"pacman.opponents.ghosts.memetix.myghosts")
-					|| setting.opponent.toLowerCase().equals(
-							"pacman.opponents.ghosts.eiisolver.myghosts")) {
+			if (setting.opponent
+					.equalsIgnoreCase("pacman.controllers.examples.legacy2thereckoning")
+					|| setting.opponent
+							.equalsIgnoreCase("pacman.opponents.ghosts.ghostbuster.myghosts")
+					|| setting.opponent
+							.equalsIgnoreCase("pacman.opponents.ghosts.memetix.myghosts")
+					|| setting.opponent
+							.equalsIgnoreCase("pacman.opponents.ghosts.eiisolver.myghosts")
+					|| setting.opponent
+							.equalsIgnoreCase("pacman.opponents.Ghosts.flamedragon.myghosts")
+					|| setting.opponent.equalsIgnoreCase("pacman.opponents.Ghosts.wilsh.myghosts")) {
 				System.out.println("Opponent: " + setting.opponent);
 				ghostClass = Class.forName(setting.opponent);
 				ghosts = (Controller<EnumMap<GHOST, MOVE>>) ghostClass.newInstance();
@@ -232,7 +244,7 @@ public class Executor {
 					System.err.println("Error count: " + errorCount);
 					ex.printStackTrace();
 					// too many errors, skip the game
-					if(errorCount >= 5) {
+					if (errorCount >= 5) {
 						System.err.println("Too many errors, ending game.");
 						writeOutput("game skipped due to errors.");
 						break;
@@ -269,8 +281,12 @@ public class Executor {
 		writeOutput(":: Agerage lives remaining: " + ((double) avgLives / (double) realTrials));
 		writeOutput(":: Maximum score: " + maxScore);
 		writeOutput(":: Minimum score: " + minScore);
-		writeOutput(":: Std dev: " + Math.sqrt(stdSum / (double) realTrials));
-		writeOutput("");
+		double stdDev = Math.sqrt(stdSum / (double) realTrials - 1);
+		double conf = 1.96 * stdDev / Math.sqrt(realTrials - 1);
+		writeOutput(":: Std dev: " + stdDev);
+		writeOutput(":: 95% conf.:" + conf);
+		writeOutput(mean + "\t" + conf + "\t" + ((double) avgLives / (double) realTrials) + "\t"
+				+ ((double) avgMaze / (double) realTrials));
 	}
 
 	public void runGame(Controller<MOVE> pacManController,
